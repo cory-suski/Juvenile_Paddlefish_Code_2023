@@ -1,0 +1,2731 @@
+# Juvenile Paddlefish 2023 -----------------------------------------------------
+## Packages --------------------------------------------------------------------
+getwd()
+sessionInfo()
+library(styler)
+library(tidyverse)
+library(car)
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(emmeans)
+library(cowplot)
+library(viridis)
+citation("car")
+citation("cowplot")
+citation("emmeans")
+citation("ggplot2")
+citation()
+RStudio.Version()
+select <- dplyr::select
+filter <- dplyr::filter
+col_factor <- readr::col_factor
+
+## Data Files ------------------------------------------------------------------
+# Exercise and Recovery Import
+Paddlefish_ExerciseandRecovery_2023 <- read_csv("Paddlefish_ExerciseandRecovery_2023.csv",
+  col_types = cols(
+    Date = col_date(format = "%m/%d/%Y"),
+    Temperature_Group = col_factor(levels = c(
+      "Low",
+      "Middle", "High"
+    )), Recovery_Group = col_factor(levels = c(
+      "Control",
+      "Immediate", "30_min", "4_hour",
+      "8_hour"
+    )),
+    Chase_Minutes = col_double(), Chase_Seconds = col_double(),
+    Total_Chase_Time_Seconds = col_double(),
+    Treatment_Start_Time = col_time(format = "%H:%M"),
+    Treatment_End_Time = col_time(format = "%H:%M")
+  )
+)
+Exercise <- Paddlefish_ExerciseandRecovery_2023
+glimpse(Exercise)
+summary(Exercise)
+
+# Chase Time Summary Data Import
+Chase_sum <- read_csv("Chase_sum.csv", col_types = cols(Temperature_Group = col_factor(levels = c(
+  "High",
+  "Low", "Middle"
+))))
+
+glimpse(Chase_sum)
+
+# Hematocrit Import
+Paddlefish_Hematocrit_2023 <- read_csv("Paddlefish_Hematocrit_2023.csv",
+  col_types = cols(
+    Date = col_date(format = "%m/%d/%Y"),
+    Temperature_Group = col_factor(levels = c(
+      "Low",
+      "Middle", "High"
+    )), Recovery_Group = col_factor(levels = c(
+      "Control",
+      "Immediate", "30_min", "4_hour",
+      "8_hour"
+    )), Total_Hematocrit_Length_2_mm = col_double(),
+    RBC_Length_2_mm = col_double(), Proportion_2 = col_double()
+  )
+)
+Hematocrit <- Paddlefish_Hematocrit_2023
+glimpse(Hematocrit)
+summary(Hematocrit)
+
+# Critical Thermal Maxima Import
+Paddlefish_CTMax_2023 <- read_csv("Paddlefish_CTMax_2023.csv",
+  col_types = cols(
+    Date = col_date(format = "%m/%d/%Y"),
+    Temperature_Group = col_factor(levels = c(
+      "Low", "Middle", "High"
+    )),
+    Acclimation_Start_Time = col_time(format = "%H:%M"),
+    Test_Start_Time = col_time(format = "%H:%M"),
+    Test_End_Time = col_time(format = "%H:%M"),
+    Fish_ID = col_number(), LOE_time = col_time(format = "%H:%M")
+  )
+)
+CTMax <- Paddlefish_CTMax_2023
+glimpse(CTMax)
+
+# Critical Thermal Maxima Water Temperature HOBO Import
+CTMax_HOBO_Data_2023 <- read_csv("CTMax_HOBO_Data_2023.csv",
+  col_types = cols(
+    HOBO_ID = col_character(),
+    Temperature_Group = col_factor(levels = c(
+      "Low",
+      "Middle", "High"
+    )), `Date_Time _CDT` = col_character()
+  )
+)
+CTMax_HOBO <- CTMax_HOBO_Data_2023
+glimpse(CTMax_HOBO)
+
+
+CTMax_HOBO_Data_2023_Reformatted <- read_csv("CTMax_HOBO_Data_2023_Reformatted.csv",
+  col_types = cols(HOBO_ID = col_character())
+)
+CTMAXHOBO <- CTMax_HOBO_Data_2023_Reformatted
+glimpse(CTMAXHOBO)
+
+# Change in Acclimation Temperature Data Import
+CTMax_Change_in_Temp <- read_csv("CTMax_Change_in_Temp.csv",
+  col_types = cols(Temperature_Group = col_factor(levels = c(
+    "Low",
+    "Middle", "High"
+  )), Test_or_Acclimation = col_factor(levels = c(
+    "Test",
+    "Acclimation"
+  )), Time_Minutes = col_double())
+)
+glimpse(CTMax_Change_in_Temp)
+
+# Hemoglobin Data Import
+Combined_Hb_All_2023 <- read_csv("Combined_Hb_All_2023.csv", col_types = cols(
+  Temperature_Group = col_factor(levels = c(
+    "Low", "Middle", "High")), 
+  Recovery_Group = col_factor(levels = c(
+      "Control",
+      "Immediate", "30_min", "4_hour",
+      "8_hour"
+  )))
+)
+
+Hb <- Combined_Hb_All_2023
+glimpse(Hb)
+summary(Hb)
+
+
+# Mean Corpuscular Hemoglobin Concentration Data Import
+Mean_Corpuscular_Hb <- read_csv("Mean_Corpuscular_Hb.csv",
+  col_types = cols(Temperature_Group = col_factor(levels = c(
+    "Low",
+    "Middle", "High"
+  )), Recovery_Group = col_factor(levels = c(
+    "Control",
+    "Immediate", "30_min", "4_hour",
+    "8_hour"
+  )))
+)
+
+Mean_Corp_Hb <- Mean_Corpuscular_Hb
+glimpse(Mean_Corp_Hb)
+summary(Mean_Corp_Hb)
+
+# Acclimation Data Import
+Acclimation_Checks_Data <- read_csv("Acclimation_Checks_Data.csv",
+  col_types = cols(
+    Check_date = col_date(format = "%m/%d/%Y"),
+    Temperature_group = col_factor(levels = c(
+      "Low",
+      "Middle", "High"
+    ))
+  )
+)
+
+Acclimation_data <- Acclimation_Checks_Data
+glimpse(Acclimation_data)
+
+# Acclimation HOBO Temperature Data Import
+Acclimation_HOBO_Data <- read_csv("Acclimation_HOBO_Data.csv",
+  col_types = cols(Temperature_group = col_factor(levels = c(
+    "Low",
+    "Middle", "High"
+  )), Date_Time = col_datetime(format = "%m/%d/%Y %H:%M:%S"))
+)
+
+glimpse(Acclimation_HOBO_Data)
+
+
+# Plasma Lactate Data Import
+Combined_Lactate_Assays_2023 <- read_csv("Combined_Lactate_Assays_2023.csv",
+  col_types = cols(
+    Date = col_date(format = "%m/%d/%Y"),
+    Temperature_Group = col_factor(levels = c(
+      "High",
+      "Middle", "Low"
+    )), Recovery_Group = col_factor(levels = c(
+      "Control",
+      "Immediate", "30_min", "4_hour",
+      "8_hour"
+    ))
+  )
+)
+Lactate <- Combined_Lactate_Assays_2023
+glimpse(Lactate)
+
+#Lactate Summary Data Import
+Lactate_sum <- read_csv("Lactate.sum.csv",
+  col_types = cols(Temperature_Group = col_factor(levels = c(
+    "Low",
+    "High", "Middle"
+  )), Recovery_Group = col_factor(levels = c(
+    "30_min",
+    "4_hour", "8_hour", "Control", "Immediate"
+  )))
+)
+glimpse(Lactate_sum)
+
+
+# Plasma Cortisol Data Import
+Combined_Cortisol_Assays_Paddlefish_2023_MyAssay_Replaced_Values_Below_Dectection <- read_csv("Combined_Cortisol_Assays_Paddlefish_2023_MyAssay_Replaced_Values_Below_Dectection.csv",
+  col_types = cols(Temperature_Group = col_factor(levels = c(
+    "High",
+    "Low", "Middle"
+  )), Recovery_Group = col_factor(levels = c(
+    "Control",
+    "Immediate", "30_min", "4_hour",
+    "8_hour"
+  )), SD = col_double(), CV_percent = col_double())
+)
+Cortisol <- Combined_Cortisol_Assays_Paddlefish_2023_MyAssay_Replaced_Values_Below_Dectection
+glimpse(Cortisol)
+
+# Plasma Ions Data Import
+Ion_Pannel_Paddlefish_2023_24 <- read_csv("Ion_Pannel_Paddlefish_2023.24.csv",
+  col_types = cols(
+    Temperature_Group = col_factor(levels = c(
+      "Low",
+      "Middle", "High"
+    )), Recovery_Group = col_factor(levels = c(
+      "Control",
+      "Immediate", "30_min", "4_hour",
+      "8_hour"
+    )), Creatinine_mg.dL = col_number(),
+    BUN_mg.dL = col_number(), Total_Protein_g.dL = col_number(),
+    Albumin_g.dL = col_number(), Globulin_g.dL = col_number(),
+    Albumin_Globulin_ratio = col_number(),
+    Calcium_mg.dL = col_number(), Phosphorus_mg.dL = col_number(),
+    Sodium_mmol.L = col_number(), Potassium_mmol.L = col_number(),
+    Sodium_Potassium_ratio = col_number(),
+    Chloride_mmol.L = col_number(), Glucose_mg.dL = col_number(),
+    Cholesterol_total_mg.dL = col_number(),
+    Bicarbonate_mmol.L = col_number(),
+    Anion_gap = col_number(), Lipemic_indicator = col_number(),
+    Icteric_indicator = col_number(),
+    Hemolytic_indicator = col_number()
+  )
+)
+Ions <- Ion_Pannel_Paddlefish_2023_24
+glimpse(Ions)
+
+######################## Merged Datasets#########################################
+# Hematocrit_merged
+Hematocrit_merged <- merge(Exercise, Hematocrit, by = c("Sample_ID", "Date", "Temperature_Group", "Recovery_Group", "Temp_Recovery_Group"))
+glimpse(Hematocrit_merged)
+
+# Hemoglobin_merged
+Hb_merged <- merge(Exercise, Hb, by = c("Sample_ID", "Temperature_Group", "Recovery_Group", "Temp_Recovery_Group"))
+glimpse(Hb_merged)
+
+# MCHC_merged
+Mean_Corpuscular_Hb_merged <- merge(Exercise, Mean_Corp_Hb, by = c("Sample_ID", "Temperature_Group", "Recovery_Group", "Temp_Recovery_Group"))
+glimpse(Mean_Corpuscular_Hb_merged)
+
+# Lactate_merged
+Lactate_merged <- merge(Exercise, Lactate, by = c("Sample_ID", "Temperature_Group", "Recovery_Group", "Temp_Recovery_Group"))
+glimpse(Lactate_merged)
+summary(Lactate)
+
+# Cortisol_merged
+Cortisol_merged <- merge(Exercise, Cortisol, by = c("Sample_ID", "Temperature_Group", "Recovery_Group", "Temp_Recovery_Group"))
+glimpse(Cortisol_merged)
+
+# Ions merged
+Ions_merged <- merge(Exercise, Ions, by = c("Sample_ID", "Temperature_Group", "Recovery_Group", "Temp_Recovery_Group"))
+glimpse(Ions_merged)
+
+############################### Acclimation Data Analyses#######################
+## Summary Statistics Acclimation Parameters -----------------------------------
+# Dissolved Oxygen mg/L
+acc.DO.sum <- Acclimation_data %>%
+  group_by(Temperature_group) %>%
+  select(c("DO_mg.L")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+acc.DO.sum
+
+write.csv(acc.DO.sum, "acc.DO.sum.csv")
+
+# Ammonia mg/L NH3
+acc.ammonia.sum <- Acclimation_data %>%
+  group_by(Temperature_group) %>%
+  select(c("Ammonia_mg.LNH3")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+acc.ammonia.sum
+write.csv(acc.ammonia.sum, "acc.ammonia.sum.csv")
+
+# Hobo_Temperatures
+acc.temp.sum <- Acclimation_HOBO_Data %>%
+  group_by(Temperature_group) %>%
+  select(c("Temperature")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+acc.temp.sum
+write.csv(acc.temp.sum, "acc.temp.sum.csv")
+
+############################ Exercise Analyses #################################
+### Summary Statistics Exercise -------------------------------------------------
+# Eye to Fork Length
+sum.stats.ETFL <- Exercise %>%
+  group_by(Temperature_Group, Recovery_Group) %>%
+  select(c("Eye_to_fork_Length_mm")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.ETFL
+
+# Weight
+sum.stats.weight <- Exercise %>%
+  group_by(Temperature_Group, Recovery_Group) %>%
+  select(c("Weight_g")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.weight
+
+# Chase_Time
+sum.stats.chase <- Exercise %>%
+  group_by(Temperature_Group, Recovery_Group, Temp_Recovery_Group) %>%
+  select(c("Total_Chase_Time_Seconds")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.chase
+
+# Hematocrit
+sum.stats.hematocrit <- Hematocrit %>%
+  group_by(Temperature_Group) %>%
+  select(c("Average_of_Proportions")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.hematocrit
+
+# Hemoglobin
+sum.stats.Hb <- Hb %>%
+  group_by(Temperature_Group) %>%
+  select(c("Hb")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.Hb
+
+write.csv(sum.stats.Hb, "sum.stats.Hb.csv")
+
+# Mean Corpuscular Hb Concentration
+sum.stats.MCH <- Mean_Corp_Hb %>%
+  group_by(Temperature_Group) %>%
+  select(c("Mean_Corpuscular_Hb_Concentration")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.MCH
+
+write.csv(sum.stats.MCH, "sum.stats.MCH.csv")
+
+# Plasma Lactate
+sum.stats.lactate <- Lactate %>%
+  group_by(Temperature_Group,Recovery_Group) %>%
+  select(c("Plasma_Lactate")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.lactate
+write.csv(sum.stats.lactate, "Lactate.sum.csv")
+
+# Plasma Cortisol
+glimpse(Cortisol)
+sum.stats.cortisol <- Cortisol %>%
+  group_by(Recovery_Group) %>%
+  select(c("Average_Cortisol_Concentration")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.cortisol
+write.csv(sum.stats.cortisol, "Cortisol.sum.csv")
+
+# Plasma Ion Summaries
+glimpse(Ions)
+# Sodium
+sum.stats.sodium <- Ions %>%
+  group_by(Temperature_Group, Recovery_Group) %>%
+  select(c("Sodium_mmol.L")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.sodium
+
+# Chloride
+sum.stats.chloride <- Ions %>%
+  group_by(Temperature_Group) %>%
+  select(c("Chloride_mmol.L")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.chloride
+
+# Potassium
+sum.stats.potassium <- Ions %>%
+  group_by(Temperature_Group) %>%
+  select(c("Potassium_mmol.L")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.potassium
+
+# Glucose
+sum.stats.glucose.ions <- Ions %>%
+  group_by(Temperature_Group, Recovery_Group) %>%
+  select(c("Glucose_mg.dL")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.glucose.ions
+
+glimpse(Ions)
+
+# Creatinine
+sum.stats.creatinine <- Ions %>%
+  group_by(Temperature_Group, Recovery_Group) %>%
+  select(c("Creatinine_mg.dL")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.creatinine
+
+# BUN
+sum.stats.BUN <- Ions %>%
+  group_by(Temperature_Group) %>%
+  select(c("BUN_mg.dL")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.BUN
+
+# Total Protein
+sum.stats.protein <- Ions %>%
+  group_by(Temperature_Group, Recovery_Group) %>%
+  select(c("Total_Protein_g.dL")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.protein
+
+# Albumin
+sum.stats.albumin <- Ions %>%
+  group_by(Temperature_Group, Recovery_Group) %>%
+  select(c("Albumin_g.dL")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.albumin
+
+# Calcium
+sum.stats.calcium <- Ions %>%
+  group_by(Temperature_Group) %>%
+  select(c("Calcium_mg.dL")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.calcium
+
+# Phosphorus
+sum.stats.phosphorus <- Ions %>%
+  group_by(Recovery_Group) %>%
+  select(c("Phosphorus_mg.dL")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.phosphorus
+
+# Cholesterol
+sum.stats.cholesterol <- Ions %>%
+  group_by(Temperature_Group) %>%
+  select(c("Cholesterol_total_mg.dL")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.cholesterol
+
+# Bicarbonate
+sum.stats.bicarbonate <- Ions %>%
+  group_by(Recovery_Group) %>%
+  select(c("Bicarbonate_mmol.L")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.bicarbonate
+
+# Anion Gap
+sum.stats.anion.gap <- Ions %>%
+  group_by(Temperature_Group) %>%
+  select(c("Anion_gap")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.anion.gap
+glimpse(Ions)
+######################## ANOVAs for Exercise####################################
+# Eye to Fork Length ANOVA (Selected)
+hist(Exercise$Eye_to_fork_Length_mm)
+ETFL.out <- aov(Eye_to_fork_Length_mm ~ Temperature_Group * Recovery_Group,
+  data = Exercise
+)
+summary(ETFL.out)
+Anova(ETFL.out)
+
+shapiro.test(ETFL.out$res)
+par(mfrow = c(2, 2))
+plot(ETFL.out)
+leveneTest(ETFL.out)
+
+#Zurr Mixed Effect Models 2.3.6.1
+#"C:\Lab_Files_Team_Folder\Stats_Stuff\Textbooks_and_book_chapters\Zuur_et_al_Mixed_Effects_Models_Book.pdf"
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(ETFL.out, add.smooth = FALSE, which = 1)
+E <- resid(ETFL.out)
+ hist(E, xlab = "Residuals", main = "")
+plot(Exercise$Temperature_Group, E, xlab = "temp",
+       ylab = "Residuals")
+plot(Exercise$Recovery_Group, E, xlab = "recovery",
+       ylab = "Residuals")
+par(op)
+
+ETFL.emmeans.out <- emmeans(ETFL.out, specs = pairwise ~ Temperature_Group*Recovery_Group)
+ETFL.emmeans.out
+
+#Weight ANOVA (selected)
+hist(Exercise$Weight_g)
+Weight.out <- aov(Weight_g ~ Temperature_Group * Recovery_Group,
+  data = Exercise
+)
+summary(Weight.out)
+Anova(Weight.out)
+
+shapiro.test(Weight.out$res)
+par(mfrow = c(2, 2))
+plot(Weight.out)
+leveneTest(Weight.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Weight.out, add.smooth = FALSE, which = 1)
+E <- resid(Weight.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Exercise$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Exercise$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+Weight.emmeans.out <- emmeans(Weight.out, specs = pairwise ~ Temperature_Group*Recovery_Group)
+Weight.emmeans.out
+
+#Chase Time ANOVA (selected)
+hist(Exercise$Total_Chase_Time_Seconds)
+Chase.out <- aov(log(Total_Chase_Time_Seconds) ~ Temperature_Group * Recovery_Group,
+  data = Exercise
+)
+summary(Chase.out)
+Anova(Chase.out)
+
+shapiro.test(Chase.out$res)
+par(mfrow = c(2, 2))
+plot(Chase.out)
+leveneTest(Chase.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Chase.out, add.smooth = FALSE, which = 1)
+E <- resid(Chase.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Exercise$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Exercise$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+Chase.emmeans.out <- emmeans(Chase.out, specs = pairwise ~ Temperature_Group*Recovery_Group)
+Chase.emmeans.out
+
+#Hematocrit ANOVA (selected)
+hist(Hematocrit$Average_of_Proportions)
+Hematocrit.out <- aov(Average_of_Proportions ~ Temperature_Group * Recovery_Group,
+                      data = Hematocrit_merged
+)
+summary(Hematocrit.out)
+Anova(Hematocrit.out)
+
+shapiro.test(Hematocrit.out$res)
+par(mfrow = c(2, 2))
+plot(Hematocrit.out)
+leveneTest(Hematocrit.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Hematocrit.out, add.smooth = FALSE, which = 1)
+E <- resid(Hematocrit.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Hematocrit_merged$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Hematocrit_merged$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+Hematocrit.emmeans.out <- emmeans(Hematocrit.out, specs = pairwise ~ Temperature_Group)
+Hematocrit.emmeans.out
+
+# Hb ANOVA (selected)
+hist(Hb$Hb)
+Hb.out <- aov(Hb ~ Temperature_Group * Recovery_Group,
+              data = Hb_merged
+)
+summary(Hb.out)
+Anova(Hb.out)
+
+shapiro.test(Hb.out$res)
+par(mfrow = c(2, 2))
+plot(Hb.out)
+leveneTest(Hb.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Hb.out, add.smooth = FALSE, which = 1)
+E <- resid(Hb.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Hb_merged$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Hb_merged$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+Hb.emmeans.out <- emmeans(Hb.out, specs = pairwise ~ Temperature_Group)
+Hb.emmeans.out
+
+#Mean Corpuscular Hemoglobin Concentration ANOVA (selected)
+hist(Mean_Corp_Hb$Mean_Corpuscular_Hb_Concentration)
+Mean.corp.Hb.out <- aov(Mean_Corpuscular_Hb_Concentration ~ Temperature_Group * Recovery_Group,
+                        data = Mean_Corpuscular_Hb_merged
+)
+summary(Mean.corp.Hb.out)
+Anova(Mean.corp.Hb.out)
+
+shapiro.test(Mean.corp.Hb.out$res)
+par(mfrow = c(2, 2))
+plot(Mean.corp.Hb.out)
+leveneTest(Mean.corp.Hb.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Mean.corp.Hb.out, add.smooth = FALSE, which = 1)
+E <- resid(Mean.corp.Hb.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Mean_Corpuscular_Hb_merged$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Mean_Corpuscular_Hb_merged$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+Mean.corp.Hb.emmeans.out <- emmeans(Mean.corp.Hb.out, specs = pairwise ~ Temperature_Group)
+Mean.corp.Hb.emmeans.out
+
+Mean.corp.Hb.emmeans.out <- emmeans(Mean.corp.Hb.out, specs = pairwise ~ Recovery_Group)
+Mean.corp.Hb.emmeans.out
+
+#Plasma Lactate ANOVA (selected)
+hist(Lactate$Plasma_Lactate)
+Lactate.out <- aov(rank(Plasma_Lactate) ~ Temperature_Group * Recovery_Group,
+                   data = Lactate_merged
+)
+summary(Lactate.out)
+Anova(Lactate.out, type=3)
+
+shapiro.test(Lactate.out$res)
+par(mfrow = c(2, 2))
+plot(Lactate.out)
+leveneTest(Chase.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Lactate.out, add.smooth = FALSE, which = 1)
+E <- resid(Lactate.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Lactate_merged$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Lactate_merged$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+Lactate.emmeans.out <- emmeans(Lactate.out, specs = pairwise ~ Temperature_Group * Recovery_Group)
+Lactate.emmeans.out
+
+#Plasma Cortisol ANOVA (need to check assumptions)
+glimpse(Cortisol)
+hist(Cortisol$Average_Cortisol_Concentration)
+Cortisol.out <- aov(rank(Average_Cortisol_Concentration) ~ Temperature_Group * Recovery_Group,
+  data = Cortisol
+)
+summary(Cortisol.out)
+Anova(Cortisol.out)
+
+shapiro.test(Cortisol.out$res)
+par(mfrow = c(2, 2))
+plot(Cortisol.out)
+leveneTest(Cortisol.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Cortisol.out, add.smooth = FALSE, which = 1)
+E <- resid(Cortisol.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Cortisol$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Cortisol$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+
+Cortisol.emmeans.out <- emmeans(Cortisol.out, specs = pairwise ~ Recovery_Group)
+Cortisol.emmeans.out
+
+#Plasma Ions ANOVAs
+glimpse(Ions)
+# Sodium (Selected)
+hist(Ions$Sodium_mmol.L)
+Sodium.out <- aov(rank(Sodium_mmol.L) ~ Temperature_Group * Recovery_Group,
+  data = Ions
+)
+summary(Sodium.out)
+Anova(Sodium.out)
+
+shapiro.test(Sodium.out$res)
+par(mfrow = c(2, 2))
+plot(Sodium.out)
+leveneTest(Sodium.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Sodium.out, add.smooth = FALSE, which = 1)
+E <- resid(Sodium.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Ions$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Ions$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+Sodium.emmeans.out <- emmeans(Sodium.out, specs = pairwise ~  Recovery_Group)
+Sodium.emmeans.out
+
+# Potassium log Transformed (Selected)
+hist(Ions$Potassium_mmol.L)
+Potassium.out <- aov(Potassium_mmol.L ~ Temperature_Group * Recovery_Group,
+  data = Ions
+)
+summary(Potassium.out)
+Anova(Potassium.out)
+
+shapiro.test(Potassium.out$res)
+par(mfrow = c(2, 2))
+plot(Potassium.out)
+leveneTest(Potassium.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Potassium.out, add.smooth = FALSE, which = 1)
+E <- resid(Potassium.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Ions$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Ions$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+
+Potassium.emmeans.out <- emmeans(Potassium.out, specs = pairwise ~ Temperature_Group)
+Potassium.emmeans.out
+
+Potassium.emmeans.out <- emmeans(Potassium.out, specs = pairwise ~  Recovery_Group)
+Potassium.emmeans.out
+
+# Chloride (Selected, but check on assumptions of homogeneity)
+hist(Ions$Chloride_mmol.L)
+Chloride.out <- aov(log(Chloride_mmol.L) ~ Temperature_Group * Recovery_Group,
+  data = Ions
+)
+summary(Chloride.out)
+Anova(Chloride.out)
+
+shapiro.test(Chloride.out$res)
+par(mfrow = c(2, 2))
+plot(Chloride.out)
+leveneTest(Chloride.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Chloride.out, add.smooth = FALSE, which = 1)
+E <- resid(Chloride.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Ions$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Ions$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+
+Chloride.emmeans.out <- emmeans(Chloride.out, specs = pairwise ~ Temperature_Group)
+Chloride.emmeans.out
+
+Chloride.emmeans.out <- emmeans(Chloride.out, specs = pairwise ~  Recovery_Group)
+Chloride.emmeans.out
+
+# Glucose ANOVA (selected)
+hist(Ions$Glucose_mg.dL)
+Glucose.ions.out <- aov(rank(Glucose_mg.dL) ~ Temperature_Group * Recovery_Group,
+                        data = Ions
+)
+summary(Glucose.ions.out)
+Anova(Glucose.ions.out)
+
+shapiro.test(Glucose.ions.out$res)
+par(mfrow = c(2, 2))
+plot(Glucose.ions.out)
+leveneTest(Glucose.ions.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Glucose.ions.out, add.smooth = FALSE, which = 1)
+E <- resid(Glucose.ions.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Ions$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Ions$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+Glucose.ions.emmeans.out <- emmeans(Glucose.ions.out, specs = pairwise ~Recovery_Group)
+Glucose.ions.emmeans.out
+
+#Other Ions ANOVAs
+glimpse(Ions)
+summary(Ions)
+# Creatinine ANOVA (weird data, may need to discuss whether to keep it due to not fitting models)
+hist(Ions$Creatinine_mg.dL)
+Creatinine.ions.out <- aov(rank(Creatinine_mg.dL) ~ Temperature_Group * Recovery_Group,
+                        data = Ions
+)
+summary(Creatinine.ions.out)
+Anova(Creatinine.ions.out)
+
+shapiro.test(Creatinine.ions.out$res)
+par(mfrow = c(2, 2))
+plot(Creatinine.ions.out)
+leveneTest(Creatinine.ions.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Creatinine.ions.out, add.smooth = FALSE, which = 1)
+E <- resid(Creatinine.ions.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Ions$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Ions$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+
+Creatinine.ions.emmeans.out <- emmeans(Creatinine.ions.out, specs = pairwise ~ Temperature_Group * Recovery_Group)
+Creatinine.ions.emmeans.out
+
+# BUN ANOVA (selected)
+hist(Ions$BUN_mg.dL)
+BUN.ions.out <- aov(rank(BUN_mg.dL) ~ Temperature_Group * Recovery_Group,
+                           data = Ions
+)
+summary(BUN.ions.out)
+Anova(BUN.ions.out)
+
+shapiro.test(BUN.ions.out$res)
+par(mfrow = c(2, 2))
+plot(BUN.ions.out)
+leveneTest(BUN.ions.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(BUN.ions.out, add.smooth = FALSE, which = 1)
+E <- resid(BUN.ions.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Ions$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Ions$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+BUN.ions.emmeans.out <- emmeans(BUN.ions.out, specs = pairwise ~ Temperature_Group )
+BUN.ions.emmeans.out
+
+BUN.ions.emmeans.out <- emmeans(BUN.ions.out, specs = pairwise ~  Recovery_Group)
+BUN.ions.emmeans.out
+
+#Total Protein ANOVA (weird data, may need to discuss whether to keep it due to not fitting models)
+glimpse(Ions)
+summary(Ions)
+hist(Ions$Total_Protein_g.dL)
+Total.protein.ions.out <- aov(rank(Total_Protein_g.dL) ~ Temperature_Group * Recovery_Group,
+                          data = Ions
+)
+summary(Total.protein.ions.out)
+Anova(Total.protein.ions.out)
+
+shapiro.test(Total.protein.ions.out$res)
+par(mfrow = c(2, 2))
+plot(Total.protein.ions.out)
+leveneTest(Total.protein.ions.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Total.protein.ions.out, add.smooth = FALSE, which = 1)
+E <- resid(Total.protein.ions.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Ions$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Ions$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+total.protein.ions.emmeans.out <- emmeans(Total.protein.ions.out, specs =  pairwise~Temperature_Group)
+total.protein.ions.emmeans.out
+
+total.protein.ions.emmeans.out <- emmeans(Total.protein.ions.out, specs =  pairwise~ Recovery_Group)
+total.protein.ions.emmeans.out
+
+# Albumin ANOVA (weird data, may need to discuss whether to keep it due to not fitting models)
+hist(Ions$Albumin_g.dL)
+Albumin.ions.out <- aov(rank(Albumin_g.dL) ~ Temperature_Group * Recovery_Group,
+                    data = Ions
+)
+summary(Albumin.ions.out)
+Anova(Albumin.ions.out)
+
+shapiro.test(Albumin.ions.out$res)
+par(mfrow = c(2, 2))
+plot(Albumin.ions.out)
+leveneTest(Albumin.ions.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Albumin_g.dL, add.smooth = FALSE, which = 1)
+E <- resid(Albumin_g.dL)
+hist(E, xlab = "Residuals", main = "")
+plot(Ions$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Ions$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+Albumin.ions.emmeans.out <- emmeans(Albumin.ions.out, specs = pairwise ~ Temperature_Group * Recovery_Group)
+Albumin.ions.emmeans.out
+
+#Calcium ANOVA (selected)
+hist(Ions$Calcium_mg.dL)
+Calcium.ions.out <- aov(rank(Calcium_mg.dL) ~ Temperature_Group * Recovery_Group,
+                        data = Ions
+)
+summary(Calcium.ions.out)
+Anova(Calcium.ions.out)
+
+shapiro.test(Calcium.ions.out$res)
+par(mfrow = c(2, 2))
+plot(Calcium.ions.out)
+leveneTest(Calcium.ions.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Calcium.ions.out, add.smooth = FALSE, which = 1)
+E <- resid(Calcium.ions.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Ions$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Ions$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+Calcium.ions.emmeans.out <- emmeans(Calcium.ions.out, specs = pairwise ~ Temperature_Group)
+Calcium.ions.emmeans.out
+
+Calcium.ions.emmeans.out <- emmeans(Calcium.ions.out, specs = pairwise ~ Recovery_Group)
+Calcium.ions.emmeans.out
+
+#Phosphorous ANOVA (selected)
+hist(Ions$Phosphorus_mg.dL)
+Phosphorous.ions.out <- aov(rank(Phosphorus_mg.dL) ~ Temperature_Group * Recovery_Group,
+                        data = Ions
+)
+summary(Phosphorous.ions.out)
+Anova(Phosphorous.ions.out)
+
+shapiro.test(Phosphorous.ions.out$res)
+par(mfrow = c(2, 2))
+plot(Phosphorous.ions.out)
+leveneTest(Phosphorous.ions.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Phosphorous.ions.out, add.smooth = FALSE, which = 1)
+E <- resid(Phosphorous.ions.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Ions$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Ions$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+Phorphorous.ions.emmeans.out <- emmeans(Phosphorous.ions.out, specs = pairwise ~ Temperature_Group )
+Phorphorous.ions.emmeans.out
+
+
+Phorphorous.ions.emmeans.out <- emmeans(Phosphorous.ions.out, specs = pairwise ~  Recovery_Group)
+Phorphorous.ions.emmeans.out
+#Total Cholesterol ANOVA (selected)
+hist(Ions$Cholesterol_total_mg.dL)
+Cholesterol.ions.out <- aov(Cholesterol_total_mg.dL ~ Temperature_Group * Recovery_Group,
+                            data = Ions
+)
+summary(Cholesterol.ions.out)
+Anova(Cholesterol.ions.out)
+
+shapiro.test(Cholesterol.ions.out$res)
+par(mfrow = c(2, 2))
+plot(Cholesterol.ions.out)
+leveneTest(Cholesterol.ions.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Cholesterol.ions.out, add.smooth = FALSE, which = 1)
+E <- resid(Cholesterol.ions.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Ions$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Ions$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+Cholestoral.ions.emmeans.out <- emmeans(Cholesterol.ions.out, specs = pairwise ~ Temperature_Group)
+Cholestoral.ions.emmeans.out
+
+#Bicarbonate ANOVA
+hist(Ions$Bicarbonate_mmol.L)
+Bicarbonate.ions.out <- aov(Bicarbonate_mmol.L ~ Temperature_Group * Recovery_Group,
+                            data = Ions
+)
+summary(Bicarbonate.ions.out)
+Anova(Bicarbonate.ions.out)
+
+shapiro.test(Bicarbonate.ions.out$res)
+par(mfrow = c(2, 2))
+plot(Bicarbonate.ions.out)
+leveneTest(Bicarbonate.ions.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Bicarbonate_mmol.L, add.smooth = FALSE, which = 1)
+E <- resid(Bicarbonate_mmol.L)
+hist(E, xlab = "Residuals", main = "")
+plot(Ions$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Ions$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+
+Bicarbonate.ions.emmeans.out <- emmeans(Bicarbonate.ions.out, specs = pairwise ~ Temperature_Group )
+Bicarbonate.ions.emmeans.out
+
+Bicarbonate.ions.emmeans.out <- emmeans(Bicarbonate.ions.out, specs = pairwise ~ Recovery_Group)
+Bicarbonate.ions.emmeans.out
+
+#Anion Gap ANOVA
+hist(Ions$Anion_gap)
+Anion.gap.ions.out <- aov(rank(Anion_gap) ~ Temperature_Group * Recovery_Group,
+                            data = Ions
+)
+summary(Anion.gap.ions.out)
+Anova(Anion.gap.ions.out)
+
+shapiro.test(Anion.gap.ions.out$res)
+par(mfrow = c(2, 2))
+plot(Anion.gap.ions.out)
+leveneTest(Anion.gap.ions.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(Anion.gap.ions.out, add.smooth = FALSE, which = 1)
+E <- resid(Anion.gap.ions.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Ions$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Ions$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+Anion.gap.ions.emmeans.out <- emmeans(Anion.gap.ions.out, specs =  pairwise~Temperature_Group)
+Anion.gap.ions.emmeans.out
+
+Anion.gap.ions.emmeans.out <- emmeans(Anion.gap.ions.out, specs =  pairwise~ Recovery_Group)
+Anion.gap.ions.emmeans.out
+
+######### Exercise Plots #######################################################
+### Chase Time Plot ---------------------------------------------------------
+
+Chase_sum$Temperature_Group <- relevel(Chase_sum$Temperature_Group, "High")
+Chase_sum$Temperature_Group <- relevel(Chase_sum$Temperature_Group, "Middle")
+Chase_sum$Temperature_Group <- relevel(Chase_sum$Temperature_Group, "Low")
+p70 <- ggplot(Chase_sum, aes(y = Total_Chase_Time_Seconds, x = Temperature_Group)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = Total_Chase_Time_Seconds - SE, ymax = Total_Chase_Time_Seconds + SE),
+    width = .2,
+    position = position_dodge(.9)
+  ) +
+  ylim(0, 100) +
+  labs(x = "Temperature Group", y = "Exercise Time (seconds)", color = NULL)
+
+p70 + theme_classic() +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(face = "bold")) +
+  theme(axis.text.y = element_text(face = "bold")) +
+  theme(legend.title = element_blank()) +
+  theme(legend.position = "top") +
+  scale_x_discrete(labels = c(
+    "Low" = "13.0°C", "Middle" = "17.5°C",
+    "High" = "22.0°C"
+  )) +
+  annotate("text",
+    x = c(1, 2, 3), y = c(70, 85, 95),
+    label = c("B", "A", "A"), color = "black",
+    size = 5, angle = 0, fontface = "bold"
+  )
+
+
+### Hematocrit Plots --------------------------------------------------------
+# Hematocrit
+glimpse(Hematocrit)
+Hematocrit$Temperature_Group <- relevel(Hematocrit$Temperature_Group, "High")
+Hematocrit$Temperature_Group <- relevel(Hematocrit$Temperature_Group, "Middle")
+Hematocrit$Temperature_Group <- relevel(Hematocrit$Temperature_Group, "Low")
+
+hematocrit_boxplot <- ggplot(Hematocrit, aes(x = Recovery_Group, y = Average_of_Proportions, fill = Temperature_Group)) +
+  geom_boxplot(outlier.shape = NA) +
+  stat_summary(fun.y = "mean", color = "black", shape = 4, stroke = 1.5, position = position_dodge2(
+    width = 0.75, preserve = "single"
+  )) +
+  scale_fill_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  geom_point(aes(shape = Temperature_Group), size = 2, position = position_jitterdodge())
+hematocrit_boxplot
+
+p <- ggplot(sum.stats.hematocrit, aes(x = Temperature_Group, y = mean)) +
+  geom_bar(position = "dodge", stat = "identity") +
+  geom_errorbar(aes(ymin = mean - se, ymax = mean + se),
+    width = .2,
+    position = position_dodge(.9)
+  ) +
+  geom_jitter(
+    alpha = 0.2,
+    position = position_jitter(width = 0.1)
+  )
+p + theme_classic() +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(face = "bold")) +
+  theme(axis.text.y = element_text(face = "bold")) +
+  theme(legend.title = element_blank()) +
+  theme(legend.position = "top")
+
+
+p4 <- ggplot(Hematocrit, aes(fill = Recovery_Group, y = Average_of_Proportions, x = Temperature_Group)) +
+  geom_bar(position = "dodge", stat = "identity")
+p4
+
+###Hemoglobin Plots --------------------------------------------------------
+# Hemoglobin
+Hb$Temperature_Group <- relevel(Hb$Temperature_Group, "High")
+Hb$Temperature_Group <- relevel(Hb$Temperature_Group, "Middle")
+Hb$Temperature_Group <- relevel(Hb$Temperature_Group, "Low")
+p2 <- ggplot(Hb, aes(x = Temperature_Group, y = Hb)) +
+  geom_boxplot() +
+  geom_jitter(
+    alpha = 0.2,
+    position = position_jitter(width = 0.1)
+  )
+p2 + theme_classic() +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(face = "bold")) +
+  theme(axis.text.y = element_text(face = "bold")) +
+  theme(legend.title = element_blank()) +
+  theme(legend.position = "top")
+
+### Mean Corpuscular Hemoglobin Concentration Plots -------------------------
+# Mean Corpuscular Hemoglobin Concentration
+Mean_Corp_Hb$Temperature_Group <- relevel(Mean_Corp_Hb$Temperature_Group, "High")
+Mean_Corp_Hb$Temperature_Group <- relevel(Mean_Corp_Hb$Temperature_Group, "Middle")
+Mean_Corp_Hb$Temperature_Group <- relevel(Mean_Corp_Hb$Temperature_Group, "Low")
+
+Mean_Corp_Hb$Recovery_Group <- relevel(Mean_Corp_Hb$Recovery_Group, "8_hour")
+Mean_Corp_Hb$Recovery_Group <- relevel(Mean_Corp_Hb$Recovery_Group, "4_hour")
+Mean_Corp_Hb$Recovery_Group <- relevel(Mean_Corp_Hb$Recovery_Group, "30_min")
+Mean_Corp_Hb$Recovery_Group <- relevel(Mean_Corp_Hb$Recovery_Group, "Immediate")
+Mean_Corp_Hb$Recovery_Group <- relevel(Mean_Corp_Hb$Recovery_Group, "Control")
+
+p5 <- ggplot(Mean_Corp_Hb, aes(
+  fill = Temperature_Group,
+  y = Mean_Corpuscular_Hb_Concentration, x = Recovery_Group
+)) +
+  geom_boxplot() +
+  stat_summary(
+    fun.y = mean, geom = "point", shape = 4, size = 3, color = "black",
+    position = position_dodge2(
+      width = 0.75,
+      preserve = "single"
+    )
+  )
+p5
+
+p5+theme_classic(base_size = 12) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(face = "bold")) +
+  theme(axis.text.y = element_text(face = "bold")) +
+  theme(legend.title = element_blank()) +
+  theme(legend.position = "top") +
+  scale_fill_grey(start = .9, end = 0.3) +
+  labs(y = "Mean Corpuscular Hemoglobin Concentration (g/dL)", x = "Recovery Group")
+
+tukey <- (Meantukey_mean.corp.hb)
+
+
+### Lactate Plots -----------------------------------------------------------
+#Lactate Boxplot color blind safe
+Lactate$Temperature_Group <- relevel(Lactate$Temperature_Group, "High")
+Lactate$Temperature_Group <- relevel(Lactate$Temperature_Group, "Middle")
+Lactate$Temperature_Group <- relevel(Lactate$Temperature_Group, "Low")
+
+Lactate$Recovery_Group <- relevel(Lactate$Recovery_Group, "8_hour")
+Lactate$Recovery_Group <- relevel(Lactate$Recovery_Group, "4_hour")
+Lactate$Recovery_Group <- relevel(Lactate$Recovery_Group, "30_min")
+Lactate$Recovery_Group <- relevel(Lactate$Recovery_Group, "Immediate")
+Lactate$Recovery_Group <- relevel(Lactate$Recovery_Group, "Control")
+
+lactate_boxplot <- ggplot(Lactate, aes(x = Recovery_Group, y = Plasma_Lactate, fill = Temperature_Group)) +
+  geom_boxplot(outlier.shape = NA) +
+  stat_summary(fun.y = "mean", color = "black", shape = 4, stroke = 1.5, position = position_dodge2(
+    width = 0.75, preserve = "single"
+  )) +
+  scale_fill_manual(
+    labels = c("Low" = "13.0°C", "Middle" = "17.5°C", "High" = "22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  geom_point(aes(shape = Temperature_Group,colour = Temperature_Group, fill = Temperature_Group), color = "black", stroke = 1,alpha = 0.7, size = 2, position = position_jitterdodge())
+
+lactate_boxplot
+
+l_boxplot<-lactate_boxplot + theme_classic(base_size = 14) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(color = "black",face = "bold")) +
+  theme(axis.text.y = element_text(color = "black", face = "bold")) +
+  theme(legend.title = element_blank()) + 
+  theme(axis.ticks.length=unit(.25, "cm"))+
+  scale_colour_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  scale_shape_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c(21, 24, 22)
+  ) +
+  labs(y = "Plasma Lactate (mmol/L)", x = "Recovery Group") +
+  annotate("text",
+           x = c(0.7, 1, 1.3, 1.7, 2, 2.3, 2.7, 3, 3.3, 3.7, 4, 4.3, 4.7, 5, 5.3), y = c(0.75, 1.4, 1.8, 0.75, 1.3, 1.5, 9, 4.8, 9, 4.4, 1.7, 6.2, 3, 6, 10),
+           label = c("", "", "", "", "", "", "", "", "", "", "", "", "B", "B", "A"), color = "black",
+           size = 7, angle = 0
+  ) + 
+  annotate("text",
+           x = c(0.7, 1, 1.3, 1.7, 2, 2.3, 2.7, 3, 3.3, 3.7, 4, 4.3, 4.7, 5, 5.5), y = c(0.75, 1.4, 1.8, 0.75, 1.3, 1.5, 9, 4.8, 9, 4.4, 1.7, 6.2, 3, 6, 10),
+           label = c("", "", "", "", "", "", "*", "", "*", "", "", "", "", "", "*"), color = "black",
+           size = 10, angle = 0
+  )+scale_x_discrete(
+    limit = c("Control", "Immediate", "30_min", "4_hour", "8_hour"),
+    labels = c("Control", "Immediate", "30 min", "4 h", "8 h"))+
+  theme(legend.position = "top", legend.box="vertical",legend.margin=margin(),legend.text = element_text(size=14), legend.key.height= unit(12, 'mm'),
+        legend.key.width= unit(13, 'mm'))
+
+l_boxplot
+
+#theme(legend.position = c(.1, .8), legend.box="vertical", legend.margin=margin(), legend.background = element_rect(size = 0.5, linetype = "solid", colour = "black"))
+
+ggsave("LactatePlot.png",
+       plot = last_plot(),
+       device = NULL,
+       path = NULL,
+       height = 150,
+       width = 180,
+       units = c("mm"),
+       dpi = 2000,
+       limitsize = FALSE,
+       bg = NULL)
+
+
+### Cortisol Plots ----------------------------------------------------------
+Cortisol$Temperature_Group <- relevel(Cortisol$Temperature_Group, "High")
+Cortisol$Temperature_Group <- relevel(Cortisol$Temperature_Group, "Middle")
+Cortisol$Temperature_Group <- relevel(Cortisol$Temperature_Group, "Low")
+
+Cortisol$Recovery_Group <- relevel(Cortisol$Recovery_Group, "8_hour")
+Cortisol$Recovery_Group <- relevel(Cortisol$Recovery_Group, "4_hour")
+Cortisol$Recovery_Group <- relevel(Cortisol$Recovery_Group, "30_min")
+Cortisol$Recovery_Group <- relevel(Cortisol$Recovery_Group, "Immediate")
+Cortisol$Recovery_Group <- relevel(Cortisol$Recovery_Group, "Control")
+
+cortisol_boxplot <- ggplot(Cortisol, aes(x = Recovery_Group, y = Average_Cortisol_Concentration, fill = Temperature_Group)) +
+  geom_boxplot(outlier.shape = NA) +
+  stat_summary(fun.y = "mean", color = "black", shape = 4, stroke = 1.5, position = position_dodge2(
+    width = 0.75, preserve = "single"
+  )) +
+  scale_fill_manual(
+    labels = c("Low" = "13.0°C", "Middle" = "17.5°C", "High" = "22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  geom_point(aes(shape = Temperature_Group,colour = Temperature_Group, fill = Temperature_Group), color = "black", stroke = 1,alpha = 0.7, size = 1.5, position = position_jitterdodge())
+
+cortisol_boxplot
+cort_boxplot <- cortisol_boxplot + theme_classic(base_size = 12) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(color = "black", face = "bold")) +
+  theme(axis.text.y = element_text(color = "black", face = "bold")) +
+  theme(legend.position = "none") +
+  theme(legend.title = element_blank()) + 
+  theme(axis.ticks.length=unit(.25, "cm"))+
+  scale_colour_manual(
+    labels = c("Low" = "13.0°C", "Middle" = "17.5°C", "High" = "22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  scale_shape_manual(
+    labels = c("Low" = "13.0°C", "Middle" = "17.5°C", "High" = "22.0°C"),
+    values = c(21, 24, 22)
+  ) +
+  labs(y = "Plasma Cortisol (pg/L)", x = "Recovery Group") + scale_x_discrete(
+    limit = c("Control", "Immediate", "30_min", "4_hour", "8_hour"),
+    labels = c("Control", "Immediate", "30 min", "4 h", "8 h")
+  ) +
+  annotate("segment",
+    linewidth = .5, x = .5, xend = 1.5, y = 19000, yend = 19000)  +
+  annotate("segment",
+           linewidth = .5, x = 1.5, xend = 2.5, y = 14000, yend = 14000)  +
+  annotate("segment",
+    linewidth = .5, x = 2.5, xend = 3.5, y = 34000, yend = 34000
+  ) +
+  annotate("segment",
+           linewidth = .5, x = 3.5, xend = 4.5, y = 27000, yend = 27000
+  )+
+  annotate("segment",
+           linewidth = .5, x = 4.5, xend = 5.5, y = 19000, yend = 19000
+  )+
+  annotate("text",
+           x = c(0.7, 1, 1.3, 1.7, 2, 2.3, 2.7, 3, 3.3, 3.7, 4, 4.3, 4.7, 5, 5.3), y = c(0.75, 22000, 1.8, 0.75, 17000, 1.5, 9, 37000, 9, 4.4, 30000, 6.2, 3, 22000, 10),
+           label = c("", "B", "", "", "B", "", "", "A", "", "", "B", "", "", "B", ""), color = "black",
+           size = 5, angle = 0
+  )
+
+cort_boxplot
+
+######################## Ion Plots###############################################
+# summary Sodium Graph
+glimpse(Ions)
+glimpse(sum.stats.sodium)
+# Sodium Boxplot
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "High")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Middle")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Low")
+
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "8_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "4_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "30_min")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Immediate")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Control")
+
+sodium_boxplot <- ggplot(Ions, aes(x = Recovery_Group, y = Sodium_mmol.L, fill = Temperature_Group)) +
+  geom_boxplot(outlier.shape = NA) +
+  stat_summary(fun.y = "mean", color = "black", shape = 4, stroke = 1, position = position_dodge2(
+    width = 0.75, preserve = "single"
+  )) +
+  scale_fill_manual(
+    labels = c("Low" = "13.0°C", "Middle" = "17.5°C", "High" = "22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  geom_point(aes(shape = Temperature_Group,colour = Temperature_Group, fill = Temperature_Group), color = "black", stroke = 0.5,alpha = 0.7, size = 1, position = position_jitterdodge())
+
+sodium_boxplot
+
+s_boxplot<-sodium_boxplot + theme_classic(base_size = 10) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(face = "bold")) +
+  theme(axis.text.y = element_text(color = "black", face = "bold")) +
+  theme(axis.text.x = element_blank(), size =8)+ 
+  theme(axis.title.x = element_blank()) +
+  theme(legend.title = element_blank()) +
+  theme(axis.ticks.length=unit(.25, "cm"))+
+  theme(legend.position = "none")+
+  scale_colour_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  scale_shape_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c(21, 24, 22)
+  ) +
+  labs(y = "Plasma Sodium (mmol/L)", x = "Recovery Group") + scale_x_discrete(
+    limit = c("Control", "Immediate", "30_min", "4_hour", "8_hour"),
+    labels = c("Control", "Immediate", "30 min", "4 h", "8 h")
+  )
+s_boxplot
+
+
+# summary Potassium Graph
+glimpse(Ions)
+# Potassium Boxplot
+glimpse(Ions)
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "High")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Middle")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Low")
+
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "8_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "4_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "30_min")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Immediate")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Control")
+
+potassium_boxplot <- ggplot(Ions, aes(x = Recovery_Group, y = Potassium_mmol.L, fill = Temperature_Group)) +
+  geom_boxplot(outlier.shape = NA) +
+  stat_summary(fun.y = "mean", color = "black", shape = 4, stroke = 1, position = position_dodge2(
+    width = 0.75, preserve = "single"
+  )) +
+  scale_fill_manual(
+    labels = c("Low" = "13.0°C", "Middle" = "17.5°C", "High" = "22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  geom_point(aes(shape = Temperature_Group,colour = Temperature_Group, fill = Temperature_Group), color = "black", stroke = .5,alpha = 0.7, size = 1, position = position_jitterdodge())
+
+potassium_boxplot
+
+p_boxplot<-potassium_boxplot + theme_classic(base_size = 10) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(color = "black", face = "bold")) +
+  theme(axis.text.y = element_text(color = "black", face = "bold")) +
+  theme(legend.title = element_blank()) + 
+  theme(axis.text.x = element_blank(), size =8)+ 
+  theme(axis.title.x = element_blank()) +
+  theme(axis.ticks.length=unit(.25, "cm"))+
+  ylim(2,5)+
+  scale_colour_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  scale_shape_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c(21, 24, 22)
+  ) +
+  labs(y = "Plasma Potassium (mmol/L)", x = "Recovery Group") +
+  annotate("text",
+           x = c(0.7, 1, 1.3, 1.7, 2, 2.3, 2.7, 3, 3.3, 3.7, 4, 4.3, 4.7, 5, 5.3), y = c(3.3, 4.1, 4.1, 3.6, 4.6, 4.6, 3.5, 3.9, 4.4, 3.3, 3.8, 4.2, 3, 3.8, 3.3),
+           label = c("b", "a", "a", "b", "a", "a",  "b", "a", "a",  "b", "a", "a",  "b", "a", "a"), color = "black",
+           size = 4, angle = 0)+
+  annotate("segment",
+           linewidth = .5, x = .5, xend = 1.5, y = 4.2, yend = 4.2)  +
+  annotate("segment",
+           linewidth = .5, x = 1.5, xend = 2.5, y = 4.65, yend = 4.65)  +
+  annotate("segment",
+           linewidth = .5, x = 2.5, xend = 3.5, y = 4.5, yend = 4.5
+  ) +
+  annotate("segment",
+           linewidth = .5, x = 3.5, xend = 4.5, y = 4.3, yend = 4.3
+  )+
+  annotate("segment",
+           linewidth = .5, x = 4.5, xend = 5.5, y = 3.9, yend = 3.9
+  )+
+  annotate("text",
+           x = c(0.7, 1, 1.3, 1.7, 2, 2.3, 2.7, 3, 3.3, 3.7, 4, 4.3, 4.7, 5, 5.3), y = c(0.75, 4.3, 1.8, 0.75, 4.8, 1.5, 9, 4.6, 9, 4.5, 4.4, 6.2, 3, 4, 10),
+           label = c("", "B", "", "", "A", "", "", "B", "", "", "B", "", "", "C", ""), color = "black",
+           size = 4, angle = 0
+  )+
+  theme(legend.position = "top", legend.box="vertical",legend.margin=margin(),legend.text = element_text(size=12), legend.key.height= unit(10, 'mm'),
+        legend.key.width= unit(11, 'mm'))
+      
+p_boxplot
+
+# summary Chloride Graph
+glimpse(Ions)
+# Chloride Boxplot
+glimpse(Ions)
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "High")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Middle")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Low")
+
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "8_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "4_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "30_min")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Immediate")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Control")
+
+chloride_boxplot <- ggplot(Ions, aes(x = Recovery_Group, y = Chloride_mmol.L, fill = Temperature_Group)) +
+  geom_boxplot(outlier.shape = NA) +
+  stat_summary(fun.y = "mean", color = "black", shape = 4, stroke = 1, position = position_dodge2(
+    width = 0.75, preserve = "single"
+  )) +
+  scale_fill_manual(
+    labels = c("Low" = "13.0°C", "Middle" = "17.5°C", "High" = "22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  geom_point(aes(shape = Temperature_Group,colour = Temperature_Group, fill = Temperature_Group), color = "black", stroke = .5,alpha = 0.7, size = 1, position = position_jitterdodge())
+
+chloride_boxplot
+
+chl_boxplot<-chloride_boxplot + theme_classic(base_size = 10) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(color = "black", face = "bold")) +
+  theme(axis.text.y = element_text(color = "black", face = "bold")) +
+  theme(axis.text.x = element_blank(), size =8)+ 
+  theme(axis.title.x = element_blank()) +
+  theme(legend.title = element_blank()) + 
+  theme(legend.position = "none")+
+  ylim(65, 125)+
+  scale_colour_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  scale_shape_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c(21, 24, 22)
+  ) +
+  annotate("text",
+           x = c(0.7, 1, 1.3, 1.7, 2, 2.3, 2.7, 3, 3.3, 3.7, 4, 4.3, 4.7, 5, 5.3), y = c(112, 118, 110, 116, 115, 114, 112, 123, 113, 110, 110, 107, 115, 111, 99),
+           label = c("a", "ab", "b", "a", "ab", "b","a", "ab", "b", "a", "ab", "b","a", "ab", "b"), color = "black",
+           size = 4, angle = 0)+
+  labs(y = "Plasma Chloride (mmol/L)", x = "Recovery Group") + scale_x_discrete(
+    limit = c("Control", "Immediate", "30_min", "4_hour", "8_hour"),
+    labels = c("Control", "Immediate", "30-minute", "4-hour", "8-hour")
+  )
+chl_boxplot
+# Combined Ion Plots
+ions<-plot_grid(s_boxplot, p_boxplot, chl_boxplot, ncol = 1, labels = c('A', 'B','C'), label_size = 10)
+
+ggsave("ionsPlot.12.5.24.png",
+       plot = last_plot(),
+       device = NULL,
+       path = NULL,
+       height = 200,
+       width = 140,
+       units = c("mm"),
+       dpi = 2000,
+       limitsize = FALSE,
+       bg = NULL)
+
+# Vet Med Glucose Boxplot
+glimpse(Ions)
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "High")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Middle")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Low")
+
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "8_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "4_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "30_min")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Immediate")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Control")
+
+vet_med_glucose_boxplot <- ggplot(Ions, aes(x = Recovery_Group, y = Glucose_mg.dL, fill = Temperature_Group)) +
+  geom_boxplot(outlier.shape = NA) +
+  stat_summary(fun.y = "mean", color = "black", shape = 4, stroke = 1.5, position = position_dodge2(
+    width = 0.75, preserve = "single"
+  )) +
+  scale_fill_manual(
+    labels = c("Low" = "13.0°C", "Middle" = "17.5°C", "High" = "22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  geom_point(aes(shape = Temperature_Group,colour = Temperature_Group, fill = Temperature_Group), color = "black", stroke = 1,alpha = 0.7, size = 1.5, position = position_jitterdodge())
+
+vet_med_glucose_boxplot
+
+vetmed.g_boxplot<-vet_med_glucose_boxplot + theme_classic(base_size = 12) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(color = "black", face = "bold")) +
+  theme(axis.text.y = element_text(color = "black", face = "bold")) +
+  theme(axis.text.x = element_blank(), size =8)+ 
+  theme(axis.title.x = element_blank()) +
+  theme(legend.title = element_blank()) + 
+  theme(axis.ticks.length=unit(.25, "cm"))+
+  scale_shape_manual(
+    name = "Temperature Group",
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c(16, 17, 15)
+  ) +
+  scale_colour_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  scale_shape_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c(21, 24, 22)
+  ) +
+  theme(legend.position = "top", legend.box="vertical",legend.margin=margin(),legend.text = element_text(size=14), legend.key.height= unit(12, 'mm'),
+        legend.key.width= unit(13, 'mm'))+
+  labs(y = "Plasma Glucose (mg/dL)", x = "Recovery Group") + scale_x_discrete(
+    limit = c("Control", "Immediate", "30_min", "4_hour", "8_hour"),
+    labels = c("Control", "Immediate", "30 min", "4 h", "8 h")
+  )
+
+vetmed.g_boxplot
+
+# Combined Glucose and Cortisol Plots
+glucose_and_cort_plot<-plot_grid(vetmed.g_boxplot, cort_boxplot, ncol = 1, labels = c('A', 'B'), label_size = 15)
+glucose_and_cort_plot
+
+ggsave("Glucose and Cortisol.png",
+       plot = last_plot(),
+       device = NULL,
+       path = NULL,
+       height = 190,
+       width = 140,
+       units = c("mm"),
+       dpi = 2000,
+       limitsize = FALSE,
+       bg = NULL)
+
+# Anion Gap Boxplot
+glimpse(Ions)
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "High")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Middle")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Low")
+
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "8_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "4_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "30_min")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Immediate")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Control")
+
+anion_boxplot <- ggplot(Ions, aes(x = Recovery_Group, y = Anion_gap, fill = Temperature_Group)) +
+  geom_boxplot(outlier.shape = NA) +
+  stat_summary(fun.y = "mean", color = "black", shape = 4, stroke = 1, position = position_dodge2(
+    width = 0.75, preserve = "single"
+  )) +
+  scale_fill_manual(
+    labels = c("Low" = "13.0°C", "Middle" = "17.5°C", "High" = "22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  geom_point(aes(shape = Temperature_Group,colour = Temperature_Group, fill = Temperature_Group), color = "black", stroke = .5,alpha = 0.7, size = 1, position = position_jitterdodge())
+
+anion_boxplot
+
+an_boxplot<-anion_boxplot + theme_classic(base_size = 10) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(face = "bold")) +
+  theme(axis.text.y = element_text(face = "bold")) +
+  theme(legend.title = element_blank()) + 
+  theme(legend.position = "none")+
+  scale_colour_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  scale_shape_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c(21, 24, 22)
+  ) +
+  labs(y = "Anion Gap (mmol/L)", x = "Recovery Group") + scale_x_discrete(
+    limit = c("Control", "Immediate", "30_min", "4_hour", "8_hour"),
+    labels = c("Control", "Immediate", "30-minute", "4-hour", "8-hour")
+  )+
+  annotate("text",
+           x = c(0.7, 1, 1.3, 1.7, 2, 2.4, 2.7, 3, 3.3, 3.7, 4, 4.4, 4.7, 5, 5.4), y = c(11, 17, 16, 12, 15, 18, 19, 21, 22, 17, 16, 27, 11, 20, 20),
+           label = c("c", "b", "a", "c", "b", "a", "c", "b", "a", "c", "b", "a","c", "b", "a"), color = "black",
+           size = 4, angle = 0)+
+  annotate("segment",
+           linewidth = .5, x = .5, xend = 1.5, y = 19, yend = 19)  +
+  annotate("segment",
+           linewidth = .5, x = 1.5, xend = 2.5, y = 18.5, yend = 18.5)  +
+  annotate("segment",
+           linewidth = .5, x = 2.5, xend = 3.5, y = 25, yend = 25
+  ) +
+  annotate("segment",
+           linewidth = .5, x = 3.5, xend = 4.5, y = 29, yend = 29
+  )+
+  annotate("segment",
+           linewidth = .5, x = 4.5, xend = 5.5, y = 23, yend = 23
+  )+
+  annotate("text",
+           x = c(0.7, 1, 1.3, 1.7, 2, 2.3, 2.7, 3, 3.3, 3.7, 4, 4.3, 4.7, 5, 5.3), y = c(0.75, 21, 1.8, 0.75, 20, 1.5, 9, 27, 9, 32, 31, 6.2, 3, 25, 10),
+           label = c("", "B", "", "", "B", "", "", "A", "", "", "A", "", "", "B", ""), color = "black",
+           size = 4, angle = 0
+  )
+
+
+
+an_boxplot+theme(aspect.ratio = ((1 + sqrt(2)) / 5))
+
+# summary BUN Graph
+glimpse(Ions)
+# BUN Boxplot
+glimpse(Ions)
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "High")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Middle")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Low")
+
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "8_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "4_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "30_min")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Immediate")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Control")
+
+BUN_boxplot <- ggplot(Ions, aes(x = Recovery_Group, y = BUN_mg.dL, fill = Temperature_Group)) +
+  geom_boxplot(outlier.shape = NA) +
+  stat_summary(fun.y = "mean", color = "black", shape = 4, stroke = 1, position = position_dodge2(
+    width = 0.75, preserve = "single"
+  )) +
+  scale_fill_manual(
+    labels = c("Low" = "13.0°C", "Middle" = "17.5°C", "High" = "22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  geom_point(aes(shape = Temperature_Group,colour = Temperature_Group, fill = Temperature_Group), color = "black", stroke = .5,alpha = 0.7, size = 1, position = position_jitterdodge())
+
+BUN_boxplot
+
+bun_boxplot<-BUN_boxplot + theme_classic(base_size = 10) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(face = "bold")) +
+  theme(axis.text.y = element_text(face = "bold")) +
+  theme(legend.title = element_blank()) + 
+  theme(legend.position = "none")+
+  ylim(2,5)+
+  scale_colour_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  scale_shape_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c(21, 24, 22)
+  ) +
+  labs(y = "BUN (Urea; mg/dL)", x = "Recovery Group") +
+  annotate("text",
+           x = c(0.7, 1, 1.3, 1.7, 2, 2.3, 2.7, 3, 3.3, 3.7, 4, 4.3, 4.7, 5, 5.3), y = c(3.3, 22000, 3.1, 3.6, 17000, 2.5, 3.5, 37000, 3.1, 3.3, 30000, 4.2, 3, 22000, 4.2),
+           label = c("", "", "*", "", "", "*", "", "", "*", "", "", "*", "", "", "*"), color = "black",
+           size = 10, angle = 0)+
+  annotate("segment",
+           linewidth = .5, x = .5, xend = 1.5, y = 3.3, yend = 3.3)  +
+  annotate("segment",
+           linewidth = .5, x = 1.5, xend = 2.5, y = 2.8, yend = 2.8)  +
+  annotate("segment",
+           linewidth = .5, x = 2.5, xend = 3.5, y = 3.3, yend = 3.3
+  ) +
+  annotate("segment",
+           linewidth = .5, x = 3.5, xend = 4.5, y = 4.3, yend = 4.3
+  )+
+  annotate("segment",
+           linewidth = .5, x = 4.5, xend = 5.5, y = 4.4, yend = 4.4
+  )+
+  annotate("text",
+           x = c(0.7, 1, 1.3, 1.7, 2, 2.3, 2.7, 3, 3.3, 3.7, 4, 4.3, 4.7, 5, 5.3), y = c(0.75, 3.5, 1.8, 0.75, 3, 1.5, 9, 3.5, 9, 4.5, 4.5, 6.2, 3, 4.6, 10),
+           label = c("", "A", "", "", "A", "", "", "B", "", "", "B", "", "", "A", ""), color = "black",
+           size = 5, angle = 0
+  )
+
+bun_boxplot+theme(aspect.ratio = ((1 + sqrt(2)) / 5))
+
+# summary Bicarbonate Graph
+glimpse(Ions)
+# Bicarb Boxplot
+glimpse(Ions)
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "High")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Middle")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Low")
+
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "8_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "4_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "30_min")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Immediate")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Control")
+
+Bicarb_boxplot <- ggplot(Ions, aes(x = Recovery_Group, y = Bicarbonate_mmol.L, fill = Temperature_Group)) +
+  geom_boxplot(outlier.shape = NA) +
+  stat_summary(fun.y = "mean", color = "black", shape = 4, stroke = 1, position = position_dodge2(
+    width = 0.75, preserve = "single"
+  )) +
+  scale_fill_manual(
+    labels = c("Low" = "13.0°C", "Middle" = "17.5°C", "High" = "22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  geom_point(aes(shape = Temperature_Group,colour = Temperature_Group, fill = Temperature_Group), color = "black", stroke = .5,alpha = 0.7, size = 1, position = position_jitterdodge())
+
+Bicarb_boxplot
+
+bi_boxplot<-Bicarb_boxplot + theme_classic(base_size = 10) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(face = "bold")) +
+  theme(axis.text.y = element_text(face = "bold")) +
+  theme(legend.title = element_blank()) + 
+  theme(legend.position = "none")+
+  scale_colour_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  scale_shape_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c(21, 24, 22)
+  ) +
+  labs(y = "Bicarbonate (mmol/L)", x = "Recovery Group") +
+  ylim(0,20)+
+  annotate("text",
+           x = c(0.6, 1, 1.3, 1.7, 2, 2.4, 2.7, 3, 3.3, 3.7, 4, 4.4, 4.7, 5, 5.4), y = c(11, 11, 10, 13, 10, 9, 9, 9, 7, 12, 11, 10, 13, 12, 11),
+           label = c("a", "b", "c", "a", "b", "c", "a", "b", "c", "a", "b", "c","a", "b", "c"), color = "black",
+           size = 4, angle = 0)+
+  annotate("segment",
+           linewidth = .5, x = .5, xend = 1.5, y = 12, yend = 12)  +
+  annotate("segment",
+           linewidth = .5, x = 1.5, xend = 2.5, y = 14, yend = 14)  +
+  annotate("segment",
+           linewidth = .5, x = 2.5, xend = 3.5, y = 11, yend = 11
+  ) +
+  annotate("segment",
+           linewidth = .5, x = 3.5, xend = 4.5, y = 14, yend = 14
+  )+
+  annotate("segment",
+           linewidth = .5, x = 4.5, xend = 5.5, y = 15, yend = 15
+  )+
+  annotate("text",
+           x = c(0.7, 1, 1.3, 1.7, 2, 2.3, 2.7, 3, 3.3, 3.7, 4, 4.3, 4.7, 5, 5.3), y = c(0.75, 13, 1.8, 0.75, 15, 1.5, 9, 12, 9, 32, 15, 6.2, 3, 16, 10),
+           label = c("", "A", "", "", "A", "", "", "B", "", "", "B", "", "", "A", ""), color = "black",
+           size = 4, angle = 0
+  )
+
+bi_boxplot+theme(aspect.ratio = ((1 + sqrt(2)) / 5))
+
+
+# Combined Anion Gap, Ions and Bicarb plots
+anion_ions_combo_plot<-plot_grid(p_boxplot, s_boxplot, chl_boxplot, bi_boxplot, an_boxplot, ncol = 2, labels = c('A', 'B','C', 'D', 'E'), label_size = 12)
+anion_ions_combo_plot
+
+ggsave("IonBoxplots.png",
+       plot = last_plot(),
+       device = NULL,
+       path = NULL,
+       height = 228,
+       width = 188,
+       units = c("mm"),
+       dpi = 2000,
+       limitsize = FALSE,
+       bg = NULL)
+
+######################## Revised Ion Plots#######################################
+# summary Sodium Graph
+glimpse(Ions)
+glimpse(sum.stats.sodium)
+# Sodium Boxplot
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "High")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Middle")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Low")
+
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "8_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "4_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "30_min")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Immediate")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Control")
+
+sodium_boxplot <- ggplot(Ions, aes(x = Recovery_Group, y = Sodium_mmol.L, fill = Temperature_Group)) +
+  geom_boxplot(outlier.shape = NA) +
+  stat_summary(fun.y = "mean", color = "black", shape = 4, stroke = 1, position = position_dodge2(
+    width = 0.75, preserve = "single"
+  )) +
+  scale_fill_manual(
+    labels = c("Low" = "13.0°C", "Middle" = "17.5°C", "High" = "22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  geom_point(aes(shape = Temperature_Group,colour = Temperature_Group, fill = Temperature_Group), color = "black", stroke = 0.5,alpha = 0.7, size = 1, position = position_jitterdodge())
+
+sodium_boxplot
+
+s_boxplot<-sodium_boxplot + theme_classic(base_size = 10) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(color = "black", face = "bold")) +
+  theme(axis.text.y = element_text(color = "black", face = "bold")) +
+  theme(axis.text.x = element_blank(), size =8)+ 
+  theme(axis.title.x = element_blank()) +
+  theme(legend.title = element_blank()) +
+  theme(axis.ticks.length=unit(.125, "cm"))+
+  theme(legend.position = "none")+
+  scale_colour_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  scale_shape_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c(21, 24, 22)
+  ) +
+  labs(y = "Plasma Sodium (mmol/L)", x = "Recovery Group") + scale_x_discrete(
+    limit = c("Control", "Immediate", "30_min", "4_hour", "8_hour"),
+    labels = c("Control", "Immediate", "30-minute", "4-hour", "8-hour")
+  )
+s_boxplot
+
+
+# summary Potassium Graph
+glimpse(Ions)
+# Potassium Boxplot
+glimpse(Ions)
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "High")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Middle")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Low")
+
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "8_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "4_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "30_min")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Immediate")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Control")
+
+potassium_boxplot <- ggplot(Ions, aes(x = Recovery_Group, y = Potassium_mmol.L, fill = Temperature_Group)) +
+  geom_boxplot(outlier.shape = NA) +
+  stat_summary(fun.y = "mean", color = "black", shape = 4, stroke = 1, position = position_dodge2(
+    width = 0.75, preserve = "single"
+  )) +
+  scale_fill_manual(
+    labels = c("Low" = "13.0°C", "Middle" = "17.5°C", "High" = "22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  geom_point(aes(shape = Temperature_Group,colour = Temperature_Group, fill = Temperature_Group), color = "black", stroke = .5,alpha = 0.7, size = 1, position = position_jitterdodge())
+
+potassium_boxplot
+
+p_boxplot<-potassium_boxplot + theme_classic(base_size = 10) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(color = "black", face = "bold")) +
+  theme(axis.text.y = element_text(color = "black", face = "bold")) +
+  theme(legend.title = element_blank()) + 
+  theme(axis.text.x = element_blank(), size =8)+ 
+  theme(axis.title.x = element_blank()) +
+  theme(axis.ticks.length=unit(.125, "cm"))+
+  ylim(2,5)+
+  scale_colour_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  scale_shape_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c(21, 24, 22)
+  ) +
+  labs(y = "Plasma Potassium (mmol/L)", x = "Recovery Group") +
+  annotate("segment",
+           linewidth = .5, x = .5, xend = 1.5, y = 4.2, yend = 4.2)  +
+  annotate("segment",
+           linewidth = .5, x = 1.5, xend = 2.5, y = 4.6, yend = 4.6)  +
+  annotate("segment",
+           linewidth = .5, x = 2.5, xend = 3.5, y = 4.5, yend = 4.5
+  ) +
+  annotate("segment",
+           linewidth = .5, x = 3.5, xend = 4.5, y = 4.3, yend = 4.3
+  )+
+  annotate("segment",
+           linewidth = .5, x = 4.5, xend = 5.5, y = 3.9, yend = 3.9
+  )+
+  annotate("text",
+           x = c(0.7, 1, 1.3, 1.7, 2, 2.3, 2.7, 3, 3.3, 3.7, 4, 4.3, 4.7, 5, 5.3), y = c(0.75, 4.3, 1.8, 0.75, 4.7, 1.5, 9, 4.6, 9, 4.5, 4.4, 6.2, 3, 4, 10),
+           label = c("", "B", "", "", "A", "", "", "B", "", "", "B", "", "", "C", ""), color = "black",
+           size = 4, angle = 0)+
+  coord_cartesian(ylim=c(2,5), clip = 'off')+  
+  theme(legend.position = "none")+
+  annotate("rect", xmin = 1.7, xmax = 2.4, ymin = 4.8, ymax = 5,
+           fill = c("#2c728e"), col='grey20')+
+  annotate("rect", xmin = 2.7, xmax = 3.4, ymin = 4.8, ymax = 5,
+           fill = c("#28ae80"), col='grey20')+
+  annotate("rect", xmin = 3.7, xmax = 4.4, ymin = 4.8, ymax = 5,
+           fill = c("#addc30"), col='grey20')+
+  annotate("text",
+           x = c(2.05, 3.05,4.05), y = c(4.9, 4.9, 4.9),
+           label = c("b", "a", "a"), color = "black",
+           size = 4, angle = 0
+  )
+
+
+p_boxplot
+
+# summary Chloride Graph
+glimpse(Ions)
+# Chloride Boxplot
+glimpse(Ions)
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "High")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Middle")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Low")
+
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "8_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "4_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "30_min")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Immediate")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Control")
+
+chloride_boxplot <- ggplot(Ions, aes(x = Recovery_Group, y = Chloride_mmol.L, fill = Temperature_Group)) +
+  geom_boxplot(outlier.shape = NA) +
+  stat_summary(fun.y = "mean", color = "black", shape = 4, stroke = 1, position = position_dodge2(
+    width = 0.75, preserve = "single"
+  )) +
+  scale_fill_manual(
+    labels = c("Low" = "13.0°C", "Middle" = "17.5°C", "High" = "22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  geom_point(aes(shape = Temperature_Group,colour = Temperature_Group, fill = Temperature_Group), color = "black", stroke = .5,alpha = 0.7, size = 1, position = position_jitterdodge())
+
+chloride_boxplot
+
+chl_boxplot<-chloride_boxplot + theme_classic(base_size = 10) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(color = "black", face = "bold")) +
+  theme(axis.text.y = element_text(color = "black", face = "bold")) +
+  theme(axis.text.x = element_blank(), size =8)+ 
+  theme(axis.title.x = element_blank()) +
+  theme(legend.title = element_blank()) + 
+  theme(legend.position = "none")+
+  theme(axis.ticks.length=unit(.125, "cm"))+
+  ylim(65, 125)+
+  scale_colour_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  scale_shape_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c(21, 24, 22)
+  ) +
+  labs(y = "Plasma Chloride (mmol/L)", x = "Recovery Group") + scale_x_discrete(
+    limit = c("Control", "Immediate", "30_min", "4_hour", "8_hour"),
+    labels = c("Control", "Immediate", "30-minute", "4-hour", "8-hour")
+  )+  
+  theme(legend.position = "none")+
+  coord_cartesian(ylim=c(68,120), clip = 'off')+
+  annotate("rect", xmin = 1.7, xmax = 2.4, ymin = 121, ymax = 124,
+           fill = c("#2c728e"), col='grey20')+
+  annotate("rect", xmin = 2.7, xmax = 3.4, ymin = 121, ymax = 124,
+           fill = c("#28ae80"), col='grey20')+
+  annotate("rect", xmin = 3.7, xmax = 4.4, ymin = 121, ymax = 124,
+           fill = c("#addc30"), col='grey20')+
+  annotate("text",
+           x = c(2.05, 3.05,4.05), y = c(123, 123, 123),
+           label = c("a", "ab", "b"), color = "black",
+           size = 4, angle = 0
+  )
+chl_boxplot
+
+# Anion Gap Boxplot
+glimpse(Ions)
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "High")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Middle")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Low")
+
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "8_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "4_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "30_min")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Immediate")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Control")
+
+anion_boxplot <- ggplot(Ions, aes(x = Recovery_Group, y = Anion_gap, fill = Temperature_Group)) +
+  geom_boxplot(outlier.shape = NA) +
+  stat_summary(fun.y = "mean", color = "black", shape = 4, stroke = 1, position = position_dodge2(
+    width = 0.75, preserve = "single"
+  )) +
+  scale_fill_manual(
+    labels = c("Low" = "13.0°C", "Middle" = "17.5°C", "High" = "22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  geom_point(aes(shape = Temperature_Group,colour = Temperature_Group, fill = Temperature_Group), color = "black", stroke = .5,alpha = 0.7, size = 1, position = position_jitterdodge())
+
+anion_boxplot
+
+an_boxplot<-anion_boxplot + theme_classic(base_size = 10) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(color = "black", face = "bold")) +
+  theme(axis.text.y = element_text(color = "black", face = "bold")) +
+  theme(legend.title = element_blank()) + 
+  theme(axis.ticks.length=unit(.125, "cm"))+
+  scale_colour_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  scale_shape_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c(21, 24, 22)
+  ) +
+  labs(y = "Anion Gap (mmol/L)", x = "Recovery Group") + scale_x_discrete(
+    limit = c("Control", "Immediate", "30_min", "4_hour", "8_hour"),
+    labels = c("Control", "Immediate", "30 min", "4 h", "8 h")
+  )+
+  annotate("segment",
+           linewidth = .5, x = .5, xend = 1.5, y = 17, yend = 17)  +
+  annotate("segment",
+           linewidth = .5, x = 1.5, xend = 2.5, y = 18.5, yend = 18.5)  +
+  annotate("segment",
+           linewidth = .5, x = 2.5, xend = 3.5, y = 25, yend = 25
+  ) +
+  annotate("segment",
+           linewidth = .5, x = 3.5, xend = 4.5, y = 28, yend = 28
+  )+
+  annotate("segment",
+           linewidth = .5, x = 4.5, xend = 5.5, y = 21, yend = 21
+  )+
+  annotate("text",
+           x = c(0.7, 1, 1.3, 1.7, 2, 2.3, 2.7, 3, 3.3, 3.7, 4, 4.3, 4.7, 5, 5.3), y = c(0.75, 19, 1.8, 0.75, 20.5, 1.5, 9, 27, 9, 32, 30, 6.2, 3, 23, 10),
+           label = c("", "B", "", "", "B", "", "", "A", "", "", "A", "", "", "B", ""), color = "black",
+           size = 4, angle = 0
+  )+  
+  theme(legend.position = "none")+
+  coord_cartesian(ylim=c(0,32), clip = 'off')+
+  annotate("rect", xmin = 1.7, xmax = 2.4, ymin = 32.5, ymax = 34.5,
+           fill = c("#2c728e"), col='grey20')+
+  annotate("rect", xmin = 2.7, xmax = 3.4, ymin = 32.5, ymax = 34.5,
+           fill = c("#28ae80"), col='grey20')+
+  annotate("rect", xmin = 3.7, xmax = 4.4, ymin = 32.5, ymax = 34.5,
+           fill = c("#addc30"), col='grey20')+
+  annotate("text",
+           x = c(2.05, 3.05,4.05), y = c(33.5, 33.5, 33.5),
+           label = c("c", "b", "a"), color = "black",
+           size = 4, angle = 0
+  )
+
+an_boxplot
+
+
+
+
+# summary Bicarbonate Graph
+glimpse(Ions)
+# Bicarb Boxplot
+glimpse(Ions)
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "High")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Middle")
+Ions$Temperature_Group <- relevel(Ions$Temperature_Group, "Low")
+
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "8_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "4_hour")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "30_min")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Immediate")
+Ions$Recovery_Group <- relevel(Ions$Recovery_Group, "Control")
+
+Bicarb_boxplot <- ggplot(Ions, aes(x = Recovery_Group, y = Bicarbonate_mmol.L, fill = Temperature_Group)) +
+  geom_boxplot(outlier.shape = NA) +
+  stat_summary(fun.y = "mean", color = "black", shape = 4, stroke = 1, position = position_dodge2(
+    width = 0.75, preserve = "single"
+  )) +
+  scale_fill_manual(
+    labels = c("Low" = "13.0°C", "Middle" = "17.5°C", "High" = "22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  geom_point(aes(shape = Temperature_Group,colour = Temperature_Group, fill = Temperature_Group), color = "black", stroke = .5,alpha = 0.7, size = 1, position = position_jitterdodge())
+
+Bicarb_boxplot
+
+bi_boxplot<-Bicarb_boxplot + theme_classic(base_size = 10) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(color = "black",face = "bold")) +
+  theme(axis.text.y = element_text(color = "black",face = "bold")) +
+  theme(legend.title = element_blank()) + 
+  theme(axis.ticks.length=unit(.125, "cm"))+
+  scale_colour_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c("#2c728e", "#28ae80", "#addc30")
+  ) +
+  scale_shape_manual(
+    labels = c("Low"="13.0°C", "Middle"="17.5°C", "High"="22.0°C"),
+    values = c(21, 24, 22)
+  ) +
+  labs(y = "Bicarbonate (mmol/L)", x = "Recovery Group") + scale_x_discrete(
+    limit = c("Control", "Immediate", "30_min", "4_hour", "8_hour"),
+    labels = c("Control", "Immediate", "30 min", "4 h", "8 h")
+  )+
+  annotate("segment",
+           linewidth = .5, x = .5, xend = 1.5, y = 12, yend = 12)  +
+  annotate("segment",
+           linewidth = .5, x = 1.5, xend = 2.5, y = 13, yend = 13)  +
+  annotate("segment",
+           linewidth = .5, x = 2.5, xend = 3.5, y = 8, yend = 8
+  ) +
+  annotate("segment",
+           linewidth = .5, x = 3.5, xend = 4.5, y = 12, yend = 12
+  )+
+  annotate("segment",
+           linewidth = .5, x = 4.5, xend = 5.5, y = 14, yend = 14
+  )+
+  annotate("text",
+           x = c(0.7, 1, 1.3, 1.7, 2, 2.3, 2.7, 3, 3.3, 3.7, 4, 4.3, 4.7, 5, 5.3), y = c(0.75, 13, 1.8, 0.75, 14, 1.5, 10, 9, 9, 32, 13, 6.2, 3, 15, 10),
+           label = c("", "A", "", "", "A", "", "", "B", "", "", "B", "", "", "A", ""), color = "black",
+           size = 4, angle = 0
+  )+
+  theme(legend.position = "none")+
+  coord_cartesian(ylim=c(0,18), clip = 'off')+
+  annotate("rect", xmin = 1.7, xmax = 2.4, ymin = 17, ymax = 18.5,
+          fill = c("#2c728e"), col='grey20')+
+  annotate("rect", xmin = 2.7, xmax = 3.4, ymin = 17, ymax = 18.5,
+           fill = c("#28ae80"), col='grey20')+
+  annotate("rect", xmin = 3.7, xmax = 4.4, ymin = 17, ymax = 18.5,
+           fill = c("#addc30"), col='grey20')+
+  annotate("text",
+               x = c(2.05, 3.05,4.05), y = c(17.8, 17.8, 17.8),
+               label = c("a", "b", "c"), color = "black",
+               size = 4, angle = 0
+  )
+
+bi_boxplot
+
+#legend plot
+data<-data.frame(x=2, y=5)
+legend<-ggplot(data,aes(color="purple"))
+
+legend.for.plots<-legend+ggtitle("  ")+
+  theme(legend.position = "none")+theme_classic(12)+
+  theme(axis.title = element_blank()) +
+  theme(axis.line = element_blank()) +
+  theme(axis.ticks = element_blank()) +
+  theme(axis.text.x = element_blank()) +
+  theme(axis.text.y = element_blank()) +
+  theme(legend.title = element_blank()) +
+  coord_cartesian(ylim=c(0,5), clip = 'off')+
+  xlim(0,7)+
+  annotate("rect", xmin = 3, xmax = 5, ymin = 4.3, ymax = 5.5,
+           fill = c("#2c728e"), col='grey20')+
+  annotate("rect", xmin = 3, xmax = 5, ymin = 2.3, ymax =3.5 ,
+           fill = c("#28ae80"), col='grey20')+
+  annotate("rect", xmin = 3, xmax = 5, ymin = .3, ymax = 1.5,
+           fill = c("#addc30"), col='grey20')+
+  annotate("text",
+           x = c(4, 4,4), y = c(4.5, 2.5, .5),
+           label = c("13.0°C", "17.5°C", "22.0°C"), color = "black",
+           size = 4, angle = 0 )+
+  annotate("point",
+           x = c(4, 4,4), y = c(5, 3, 1),
+           shape = c(21, 24, 22), color = "black", stroke = 1,alpha = 0.7,
+           size = 5)
+legend.for.plots
+
+
+
+# Combined Anion Gap, Ions and Bicarb plots
+anion_ions_combo_plot<-plot_grid(p_boxplot, s_boxplot, chl_boxplot, bi_boxplot, an_boxplot,legend.for.plots, ncol = 2, labels = c('A', 'B','C', 'D', 'E'), label_size = 12)
+anion_ions_combo_plot
+
+ggsave("RevisedIonBoxplots.png",
+       plot = last_plot(),
+       device = NULL,
+       path = NULL,
+       height = 228,
+       width = 188,
+       units = c("mm"),
+       dpi = 2000,
+       limitsize = FALSE,
+       bg = NULL)
+#CTMax #########################################################################
+### Summary Statistics CTMax ----------------------------------------------------
+# Eye to Fork Length
+sum.stats.ctmax.etfl <- CTMax %>%
+  group_by(Temperature_Group) %>%
+  select(c("Eye_to_fork_Length_mm")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.ctmax.etfl
+write.csv(sum.stats.ctmax.etfl, "CTMaxETFL.sum.csv")
+
+# Weight
+sum.stats.ctmax.weight <- CTMax %>%
+  group_by(Temperature_Group) %>%
+  select(c("Weight_g")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.ctmax.weight
+write.csv(sum.stats.ctmax.weight, "CTMaxWeight.sum.csv")
+
+#CTMax
+sum.stats.LOE <- CTMax %>%
+  group_by(Temperature_Group) %>%
+  select(c("LOE_Temperature_C")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.LOE
+write.csv(sum.stats.LOE, "LOE.sum.csv")
+
+### ANOVAs for CTMax-------------------------------------------------------------
+# Eye to Fork Length
+CTMaxETFL.out <- aov(Eye_to_fork_Length_mm ~ Temperature_Group, data = CTMax)
+summary(CTMaxETFL.out)
+Anova(CTMaxETFL.out)
+
+shapiro.test(CTMaxETFL.out$res)
+par(mfrow = c(2, 2))
+plot(CTMaxETFL.out)
+leveneTest(CTMaxETFL.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(CTMaxETFL.out, add.smooth = FALSE, which = 1)
+E <- resid(CTMaxETFL.out)
+hist(E, xlab = "Residuals", main = "")
+plot(CTMax$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+par(op)
+
+CTmaxETFL.emmeans.out <- emmeans(CTMaxETFL.out, specs = pairwise ~ Temperature_Group)
+CTmaxETFL.emmeans.out
+
+# Weight
+CTMaxWeight.out <- aov(Weight_g ~ Temperature_Group, data = CTMax)
+summary(CTMaxWeight.out)
+Anova(CTMaxWeight.out)
+
+shapiro.test(CTMaxWeight.out$res)
+par(mfrow = c(2, 2))
+plot(CTMaxWeight.out)
+leveneTest(CTMaxWeight.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(CTMaxWeight.out, add.smooth = FALSE, which = 1)
+E <- resid(CTMaxWeight.out)
+hist(E, xlab = "Residuals", main = "")
+plot(CTMax$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+par(op)
+
+CTmaxWeight.emmeans.out <- emmeans(CTMaxWeight.out, specs = pairwise ~ Temperature_Group)
+CTmaxWeight.emmeans.out
+
+#LOE Temp (CTMAX)
+LOE.out <- aov(LOE_Temperature_C ~ Temperature_Group, data = CTMax)
+summary(LOE.out)
+Anova(LOE.out)
+
+shapiro.test(LOE.out$res)
+par(mfrow = c(2, 2))
+plot(LOE.out)
+leveneTest(LOE.out)
+
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(LOE.out, add.smooth = FALSE, which = 1)
+E <- resid(LOE.out)
+hist(E, xlab = "Residuals", main = "")
+plot(CTMax$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+par(op)
+
+LOE.emmeans.out <- emmeans(LOE.out, specs = pairwise ~ Temperature_Group)
+LOE.emmeans.out
+
+### LM for CTMax ------------------------------------------------------------
+#Model1
+LOE.out <- lm(LOE_Temperature_C ~ Temperature_Group+ Eye_to_fork_Length_mm + Date, 
+              data = CTMax)
+summary(LOE.out)
+anova(LOE.out)
+Anova(LOE.out)
+
+#Model2
+LOE.out <- lm(LOE_Temperature_C ~ Temperature_Group+ Eye_to_fork_Length_mm, 
+              data = CTMax)
+summary(LOE.out)
+anova(LOE.out)
+Anova(LOE.out)
+LOE.emmeans.out<- emmeans(LOE.out, specs = pairwise ~ Temperature_Group)
+LOE.emmeans.out
+
+# R-squared values
+r.squaredGLMM(LOE.out)
+
+## Regressions for CTMax Water Data -----------------------------------------
+Water_model <- lm(High ~ Time_Minutes, data = CTMAXHOBO)
+summary(Water_model)
+
+Water_model1 <- lm(Middle ~ Time_Minutes, data = CTMAXHOBO)
+summary(Water_model1)
+
+Water_model2 <- lm(Low ~ Time_Minutes, data = CTMAXHOBO)
+summary(Water_model2)
+
+## CTMax Plots -----------------------------------------------------------------
+CTMax$Temperature_Group <- relevel(CTMax$Temperature_Group, "High")
+CTMax$Temperature_Group <- relevel(CTMax$Temperature_Group, "Middle")
+CTMax$Temperature_Group <- relevel(CTMax$Temperature_Group, "Low")
+p1 <- ggplot(CTMax, aes(x = Temperature_Group, y = LOE_Temperature_C, fill = Temperature_Group)) +
+  geom_boxplot() +
+  stat_summary(fun.y = "mean", color = "black", shape = 4, stroke = 1) +
+  geom_jitter(
+    alpha = 0.2,
+    position = position_jitter(width = 0.1)
+  ) +
+  labs(
+    y = "LOE Temperature(°C) ", x = "Acclimation Temperature Group",
+    color = NULL
+  ) +
+  ylim(25, 36)
+
+p1
+p1 + theme_classic() +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(face = "bold")) +
+  theme(axis.text.y = element_text(face = "bold")) +
+  theme(legend.title = element_blank()) +
+  scale_x_discrete(labels = c(
+    "Low" = "13°C", "Middle" = "17.5°C",
+    "High" = "22°C"
+  )) +
+  annotate("text",
+    x = c(1, 2, 3), y = c(28.5, 32.3, 35.5),
+    label = c("B", "A", "A"), color = "black",
+    size = 6, angle = 0
+  )
+
+p1 + theme_classic(12) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(face = "bold")) +
+  theme(axis.text.y = element_text(face = "bold")) +
+  theme(legend.title = element_blank()) +
+  scale_x_discrete(labels = c(
+    "Low" = "13°C", "Middle" = "17.5°C",
+    "High" = "22°C"
+  )) +
+  annotate("text",
+    x = c(1, 2, 3), y = c(28.5, 32.3, 35.5),
+    label = c("B", "A", "A"), color = "black",
+    size = 6, angle = 0
+  ) + theme(legend.position = "none") +
+  scale_fill_manual(values = c("#663299", "#663299", "#663299"))
+
+CTMaxPlot <- ggplot() +
+  geom_line(CTMAXHOBO,
+    mapping = aes(x = Time_Minutes, y = High),
+    linetype = "dashed", size = 1
+  ) +
+  geom_line(CTMAXHOBO,
+    mapping = aes(x = Time_Minutes, y = Middle),
+    linetype = "dotted", size = 1
+  ) +
+  geom_line(CTMAXHOBO, mapping = aes(x = Time_Minutes, y = Low), size = 1) +
+  labs(x = "Time (minutes)", y = "Temperature (°C) ", color = NULL) +
+  scale_x_continuous(breaks = round(seq(min(CTMAXHOBO$Time_Minutes),
+    max(CTMAXHOBO$Time_Minutes),
+    by = 20
+  ), 1)) +
+  theme(legend.position = "top")
+
+CTMaxPlot + theme_classic(15) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(face = "bold")) +
+  theme(axis.text.y = element_text(face = "bold")) +
+  theme(legend.position = "top") +
+  theme(legend.title = element_blank()) +
+  theme(legend.position = "top")+
+  theme(aspect.ratio = ((1 + sqrt(2)) / 5))
+
+
+# CTMax Plot change in temperature
+CTMax_Change_in_Temp
+CTMax_Change_in_Temp$Temperature_Group <- relevel(CTMax_Change_in_Temp$Temperature_Group, "High")
+CTMax_Change_in_Temp$Temperature_Group <- relevel(CTMax_Change_in_Temp$Temperature_Group, "Middle")
+CTMax_Change_in_Temp$Temperature_Group <- relevel(CTMax_Change_in_Temp$Temperature_Group, "Low")
+p1 <- ggplot(CTMax_Change_in_Temp, aes(x = Temperature_Group, y = Water_Temperature_C, fill = Test_or_Acclimation)) +
+  geom_boxplot() +
+  stat_summary(fun.y = "mean", color = "black", shape = 4, size = .5, stroke = 1.5, position = position_dodge2(width = 0.75, preserve = "single")) +
+  labs(
+    y = "Water Temperature(°C) ", x = "Acclimation Temperature Group",
+    color = NULL
+  ) +
+  ylim(10, 37)
+p1
+#theme(legend.position = c(.15, .9), legend.background = element_rect(size = 0.5, linetype = "solid", colour = "black"))
+CTMax.change<-p1 + theme_classic(12) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(face = "bold")) +
+  theme(axis.text.y = element_text(face = "bold")) +
+  theme(legend.title = element_blank()) +
+  scale_x_discrete(labels = c(
+    "Low" = "13°C", "Middle" = "17.5°C",
+    "High" = "22°C"
+  )) +
+  theme(legend.position = "top", legend.box="vertical",legend.margin=margin(),legend.text = element_text(size=12), legend.key.height= unit(10, 'mm'),
+        legend.key.width= unit(11, 'mm')) +
+  scale_fill_manual(values = c("#fc8961", "#CCCCCC"), labels = c("LOE Temperature (CTmax)", "Acclimation Temperature")) +
+  annotate("text",
+    x = c(.82, 1.82, 2.82), y = c(30, 33, 36.5),
+    label = c("B", "A", "A"), color = "black",
+    size = 4, angle = 0
+  ) +
+  annotate("text",
+    x = c(.8, 1.8, 2.8), y = c(20, 23, 25),
+    label = c("Δ 13.6°C", "Δ 12.9°C", "Δ 9.7°C"), color = "black",
+    size = 4, angle = 0
+  ) +
+  annotate("segment",
+    linewidth = 1, x = 1.5, xend = 1.5, y = 17.5, yend = 30,
+    arrow = arrow(ends = "both", angle = 90, length = unit(.2, "cm"))
+  ) +
+  annotate("segment",
+    linewidth = 1, x = .5, xend = .5, y = 12.9, yend = 26.5,
+    arrow = arrow(ends = "both", angle = 90, length = unit(.2, "cm"))
+  ) +
+  annotate("segment",
+    linewidth = 1, x = 2.5, xend = 2.5, y = 21.9, yend = 31.5,
+    arrow = arrow(ends = "both", angle = 90, length = unit(.2, "cm"))
+  )
+CTMax.change
+
+ggsave("CTMax.change.12.4.24.png",
+       plot = last_plot(),
+       device = NULL,
+       path = NULL,
+       height = 4,
+       width = 5.5,
+       units = c("in"),
+       dpi = 2000,
+       limitsize = FALSE,
+       bg = NULL)
+# CTMax regression with ETFL
+CTMaxETFLregression <- lm(CTMax$LOE_Temperature_C ~ CTMax$Eye_to_fork_Length_mm)
+plot(CTMaxETFLregression)
+acf(CTMaxETFLregression$res)
+summary(CTMaxETFLregression)
+CTMaxETFLregression
+
+plot(CTMax$LOE_Temperature_C, CTMax$Eye_to_fork_Length_mm)
+abline(lm(LOE_Temperature_C ~ Eye_to_fork_Length_mm, data = CTMax))
+
+ggp <- ggplot(CTMax, aes(Eye_to_fork_Length_mm, LOE_Temperature_C, fill = Temperature_Group, linetype = Temperature_Group, colour = Temperature_Group)) +
+  geom_point(aes(shape = Temperature_Group, color = Temperature_Group),
+             size = 5, position = position_jitter(h = 0.17, w = 0.9)
+  ) +
+  scale_fill_manual(values = c("#006666", "#0066CC", "#666666")) +
+  scale_shape_manual(
+    name = "Temperature_Group",
+    labels = c("13.0°C", "17.5°C", "22.0°C"),
+    values = c(16, 17, 15)
+  ) +
+  geom_smooth(method = lm) +
+  labs(colour = "Temperature_Group", linetype = "Temperature_Group", shape = "Temperature_Group")
+ggp
+
+ggp.1 <- ggp +
+  theme_classic(base_size = 15) +
+  scale_linetype_manual(values = c("twodash", "dotted", "solid"), labels = c("13.0°C", "17.5°C", "22.0°C")) +
+  guides(fill = "none") +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(face = "bold")) +
+  theme(axis.text.y = element_text(face = "bold")) +
+  theme(legend.title = element_blank()) +
+  theme(legend.position = "top") +
+  scale_size_manual(values = c(5, 5)) +
+  labs(y = "LOE Temperature (°C)", x = "Eye to Fork Length(mm)") +
+  scale_colour_manual(
+    labels = c("13.0°C", "17.5°C", "22.0°C"),
+    values = c("#006666", "#0066CC", "#666666")
+  ) 
+
+ggp.1
+
+CTmaxplots<-plot_grid(CTMax.change, ggp.2, ncol = 1,  labels = c('A', 'B'))
+
+CTmaxplots+
+  theme(aspect.ratio = ((1 + sqrt(5)) / 2))
+
+# CTMax regression with ETFL one line
+CTMaxETFLregression <- lm(CTMax$LOE_Temperature_C ~ CTMax$Eye_to_fork_Length_mm)
+plot(CTMaxETFLregression)
+acf(CTMaxETFLregression$res)
+summary(CTMaxETFLregression)
+CTMaxETFLregression
+
+plot(CTMax$LOE_Temperature_C, CTMax$Eye_to_fork_Length_mm)
+abline(lm(LOE_Temperature_C ~ Eye_to_fork_Length_mm, data = CTMax))
+
+ggp <- ggplot(CTMax, aes(Eye_to_fork_Length_mm, LOE_Temperature_C)) +
+  geom_point(size = 4, position = position_jitter(h = 0.17, w = 0.9)
+  ) + 
+  geom_smooth(color="black",method = lm) 
+ggp
+
+ggp.2 <- ggp +
+  theme_classic(base_size = 15) +
+  theme(axis.title = element_text(face = "bold")) +
+  theme(axis.line = element_line(size = 1)) +
+  theme(axis.text.x = element_text(face = "bold")) +
+  theme(axis.text.y = element_text(face = "bold")) +
+  theme(legend.title = element_blank()) +
+  theme(legend.position = "top") +
+  scale_size_manual(values = c(5, 5)) +
+  labs(y = "LOE Temperature (°C)", x = "Eye to Fork Length(mm)")+
+  theme(aspect.ratio = ((1 + sqrt(2)) / 5))
+ggp.2
