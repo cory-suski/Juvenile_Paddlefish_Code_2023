@@ -249,6 +249,16 @@ Ion_Pannel_Paddlefish_2023_24 <- read_csv("Ion_Pannel_Paddlefish_2023.24.csv",
 Ions <- Ion_Pannel_Paddlefish_2023_24
 glimpse(Ions)
 
+#Transport Tank Temperature Data
+Combined_Temperature_Data_from_Hauling <- read_csv("Combined_Temperature_Data_from_Hauling.csv",
+  col_types = cols(tank_side = col_factor(levels = c(
+    "1",
+    "2"
+  )))
+)
+
+transport_temp <-Combined_Temperature_Data_from_Hauling
+glimpse(transport_temp)
 ######################## Merged Datasets#########################################
 # Hematocrit_merged
 Hematocrit_merged <- merge(Exercise, Hematocrit, by = c("Sample_ID", "Date", "Temperature_Group", "Recovery_Group", "Temp_Recovery_Group"))
@@ -317,8 +327,33 @@ acc.temp.sum <- Acclimation_HOBO_Data %>%
 acc.temp.sum
 write.csv(acc.temp.sum, "acc.temp.sum.csv")
 
+#Transport Temperatures
+transport.temp.sum <- transport_temp %>%
+  select(c("Temp_transport_C")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+transport.temp.sum
+write.csv(transport.temp.sum, "transport.temp.sum.csv")
 ############################ Exercise Analyses #################################
 ### Summary Statistics Exercise -------------------------------------------------
+# Rostrum to Fork Length
+sum.stats.RTFL <- Exercise %>%
+  group_by(Temperature_Group, Recovery_Group) %>%
+  select(c("Rostrum_to_fork_Length_mm")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "min" = ~ min(., na.rm = TRUE),
+    "max" = ~ max(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.RTFL
 # Eye to Fork Length
 sum.stats.ETFL <- Exercise %>%
   group_by(Temperature_Group, Recovery_Group) %>%
@@ -409,7 +444,7 @@ write.csv(sum.stats.MCH, "sum.stats.MCH.csv")
 
 # Plasma Lactate
 sum.stats.lactate <- Lactate %>%
-  group_by(Temperature_Group,Recovery_Group) %>%
+  group_by(Recovery_Group) %>%
   select(c("Plasma_Lactate")) %>%
   summarise_all(list(
     "sample_size" = ~ sum(!is.na(.)),
@@ -495,6 +530,8 @@ sum.stats.glucose.ions <- Ions %>%
     "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
   ))
 sum.stats.glucose.ions
+
+write.csv(sum.stats.glucose.ions, "Glucose.vetmet.sum.csv")
 
 glimpse(Ions)
 
@@ -653,6 +690,34 @@ par(op)
 ETFL.emmeans.out <- emmeans(ETFL.out, specs = pairwise ~ Temperature_Group*Recovery_Group)
 ETFL.emmeans.out
 
+# Rostrum to Fork Length ANOVA (Selected)
+hist(Exercise$Rostrum_to_fork_Length_mm)
+RTFL.out <- aov(Rostrum_to_fork_Length_mm ~ Temperature_Group * Recovery_Group,
+                data = Exercise
+)
+summary(RTFL.out)
+Anova(RTFL.out)
+
+shapiro.test(RTFL.out$res)
+par(mfrow = c(2, 2))
+plot(RTFL.out)
+leveneTest(RTFL.out)
+
+#Zurr Mixed Effect Models 2.3.6.1
+#"C:\Lab_Files_Team_Folder\Stats_Stuff\Textbooks_and_book_chapters\Zuur_et_al_Mixed_Effects_Models_Book.pdf"
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(RTFL.out, add.smooth = FALSE, which = 1)
+E <- resid(RTFL.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Exercise$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+plot(Exercise$Recovery_Group, E, xlab = "recovery",
+     ylab = "Residuals")
+par(op)
+
+RTFL.emmeans.out <- emmeans(RTFL.out, specs = pairwise ~ Temperature_Group*Recovery_Group)
+RTFL.emmeans.out
+
 #Weight ANOVA (selected)
 hist(Exercise$Weight_g)
 Weight.out <- aov(Weight_g ~ Temperature_Group * Recovery_Group,
@@ -706,6 +771,7 @@ Chase.emmeans.out <- emmeans(Chase.out, specs = pairwise ~ Temperature_Group*Rec
 Chase.emmeans.out
 
 #Hematocrit ANOVA (selected)
+#sampling date not significant
 hist(Hematocrit$Average_of_Proportions)
 Hematocrit.out <- aov(Average_of_Proportions ~ Temperature_Group * Recovery_Group,
                       data = Hematocrit_merged
@@ -732,6 +798,7 @@ Hematocrit.emmeans.out <- emmeans(Hematocrit.out, specs = pairwise ~ Temperature
 Hematocrit.emmeans.out
 
 # Hb ANOVA (selected)
+#sampling date not significant
 hist(Hb$Hb)
 Hb.out <- aov(Hb ~ Temperature_Group * Recovery_Group,
               data = Hb_merged
@@ -758,6 +825,7 @@ Hb.emmeans.out <- emmeans(Hb.out, specs = pairwise ~ Temperature_Group)
 Hb.emmeans.out
 
 #Mean Corpuscular Hemoglobin Concentration ANOVA (selected)
+#sampling date not significant
 hist(Mean_Corp_Hb$Mean_Corpuscular_Hb_Concentration)
 Mean.corp.Hb.out <- aov(Mean_Corpuscular_Hb_Concentration ~ Temperature_Group * Recovery_Group,
                         data = Mean_Corpuscular_Hb_merged
@@ -787,6 +855,8 @@ Mean.corp.Hb.emmeans.out <- emmeans(Mean.corp.Hb.out, specs = pairwise ~ Recover
 Mean.corp.Hb.emmeans.out
 
 #Plasma Lactate ANOVA (selected)
+#sampling date not significant
+View(Lactate_merged)
 hist(Lactate$Plasma_Lactate)
 Lactate.out <- aov(rank(Plasma_Lactate) ~ Temperature_Group * Recovery_Group,
                    data = Lactate_merged
@@ -813,6 +883,7 @@ Lactate.emmeans.out <- emmeans(Lactate.out, specs = pairwise ~ Temperature_Group
 Lactate.emmeans.out
 
 #Plasma Cortisol ANOVA (need to check assumptions)
+#sampling date not significant
 glimpse(Cortisol)
 hist(Cortisol$Average_Cortisol_Concentration)
 Cortisol.out <- aov(rank(Average_Cortisol_Concentration) ~ Temperature_Group * Recovery_Group,
@@ -843,9 +914,10 @@ Cortisol.emmeans.out
 #Plasma Ions ANOVAs
 glimpse(Ions)
 # Sodium (Selected)
+#sampling date not significant
 hist(Ions$Sodium_mmol.L)
-Sodium.out <- aov(rank(Sodium_mmol.L) ~ Temperature_Group * Recovery_Group,
-  data = Ions
+Sodium.out <- aov(rank(Sodium_mmol.L) ~ Temperature_Group * Recovery_Group+Date,
+  data = Ions_merged
 )
 summary(Sodium.out)
 Anova(Sodium.out)
@@ -869,9 +941,10 @@ Sodium.emmeans.out <- emmeans(Sodium.out, specs = pairwise ~  Recovery_Group)
 Sodium.emmeans.out
 
 # Potassium log Transformed (Selected)
+#sampling date not significant
 hist(Ions$Potassium_mmol.L)
 Potassium.out <- aov(Potassium_mmol.L ~ Temperature_Group * Recovery_Group,
-  data = Ions
+  data = Ions_merged
 )
 summary(Potassium.out)
 Anova(Potassium.out)
@@ -899,9 +972,10 @@ Potassium.emmeans.out <- emmeans(Potassium.out, specs = pairwise ~  Recovery_Gro
 Potassium.emmeans.out
 
 # Chloride (Selected, but check on assumptions of homogeneity)
+#sampling date not significant
 hist(Ions$Chloride_mmol.L)
 Chloride.out <- aov(log(Chloride_mmol.L) ~ Temperature_Group * Recovery_Group,
-  data = Ions
+  data = Ions_merged
 )
 summary(Chloride.out)
 Anova(Chloride.out)
@@ -929,9 +1003,10 @@ Chloride.emmeans.out <- emmeans(Chloride.out, specs = pairwise ~  Recovery_Group
 Chloride.emmeans.out
 
 # Glucose ANOVA (selected)
+#sampling date not significant
 hist(Ions$Glucose_mg.dL)
 Glucose.ions.out <- aov(rank(Glucose_mg.dL) ~ Temperature_Group * Recovery_Group,
-                        data = Ions
+                        data = Ions_merged
 )
 summary(Glucose.ions.out)
 Anova(Glucose.ions.out)
@@ -959,8 +1034,8 @@ glimpse(Ions)
 summary(Ions)
 # Creatinine ANOVA (weird data, may need to discuss whether to keep it due to not fitting models)
 hist(Ions$Creatinine_mg.dL)
-Creatinine.ions.out <- aov(rank(Creatinine_mg.dL) ~ Temperature_Group * Recovery_Group,
-                        data = Ions
+Creatinine.ions.out <- aov(rank(Creatinine_mg.dL) ~ Temperature_Group * Recovery_Group+Date,
+                        data = Ions_merged
 )
 summary(Creatinine.ions.out)
 Anova(Creatinine.ions.out)
@@ -985,9 +1060,10 @@ Creatinine.ions.emmeans.out <- emmeans(Creatinine.ions.out, specs = pairwise ~ T
 Creatinine.ions.emmeans.out
 
 # BUN ANOVA (selected)
+#sampling date not significant
 hist(Ions$BUN_mg.dL)
 BUN.ions.out <- aov(rank(BUN_mg.dL) ~ Temperature_Group * Recovery_Group,
-                           data = Ions
+                           data = Ions_merged
 )
 summary(BUN.ions.out)
 Anova(BUN.ions.out)
@@ -1014,11 +1090,12 @@ BUN.ions.emmeans.out <- emmeans(BUN.ions.out, specs = pairwise ~  Recovery_Group
 BUN.ions.emmeans.out
 
 #Total Protein ANOVA (weird data, may need to discuss whether to keep it due to not fitting models)
+#sampling date not significant
 glimpse(Ions)
 summary(Ions)
 hist(Ions$Total_Protein_g.dL)
 Total.protein.ions.out <- aov(rank(Total_Protein_g.dL) ~ Temperature_Group * Recovery_Group,
-                          data = Ions
+                          data = Ions_merged
 )
 summary(Total.protein.ions.out)
 Anova(Total.protein.ions.out)
@@ -1046,8 +1123,8 @@ total.protein.ions.emmeans.out
 
 # Albumin ANOVA (weird data, may need to discuss whether to keep it due to not fitting models)
 hist(Ions$Albumin_g.dL)
-Albumin.ions.out <- aov(rank(Albumin_g.dL) ~ Temperature_Group * Recovery_Group,
-                    data = Ions
+Albumin.ions.out <- aov(rank(Albumin_g.dL) ~ Temperature_Group * Recovery_Group+Date,
+                    data = Ions_merged
 )
 summary(Albumin.ions.out)
 Anova(Albumin.ions.out)
@@ -1071,9 +1148,10 @@ Albumin.ions.emmeans.out <- emmeans(Albumin.ions.out, specs = pairwise ~ Tempera
 Albumin.ions.emmeans.out
 
 #Calcium ANOVA (selected)
+#sampling date not significant
 hist(Ions$Calcium_mg.dL)
 Calcium.ions.out <- aov(rank(Calcium_mg.dL) ~ Temperature_Group * Recovery_Group,
-                        data = Ions
+                        data = Ions_merged
 )
 summary(Calcium.ions.out)
 Anova(Calcium.ions.out)
@@ -1100,9 +1178,10 @@ Calcium.ions.emmeans.out <- emmeans(Calcium.ions.out, specs = pairwise ~ Recover
 Calcium.ions.emmeans.out
 
 #Phosphorous ANOVA (selected)
+#sampling date not significant
 hist(Ions$Phosphorus_mg.dL)
 Phosphorous.ions.out <- aov(rank(Phosphorus_mg.dL) ~ Temperature_Group * Recovery_Group,
-                        data = Ions
+                        data = Ions_merged
 )
 summary(Phosphorous.ions.out)
 Anova(Phosphorous.ions.out)
@@ -1129,9 +1208,10 @@ Phorphorous.ions.emmeans.out
 Phorphorous.ions.emmeans.out <- emmeans(Phosphorous.ions.out, specs = pairwise ~  Recovery_Group)
 Phorphorous.ions.emmeans.out
 #Total Cholesterol ANOVA (selected)
+#sampling date not significant
 hist(Ions$Cholesterol_total_mg.dL)
 Cholesterol.ions.out <- aov(Cholesterol_total_mg.dL ~ Temperature_Group * Recovery_Group,
-                            data = Ions
+                            data = Ions_merged
 )
 summary(Cholesterol.ions.out)
 Anova(Cholesterol.ions.out)
@@ -1155,9 +1235,10 @@ Cholestoral.ions.emmeans.out <- emmeans(Cholesterol.ions.out, specs = pairwise ~
 Cholestoral.ions.emmeans.out
 
 #Bicarbonate ANOVA
+#sampling date not significant
 hist(Ions$Bicarbonate_mmol.L)
 Bicarbonate.ions.out <- aov(Bicarbonate_mmol.L ~ Temperature_Group * Recovery_Group,
-                            data = Ions
+                            data = Ions_merged
 )
 summary(Bicarbonate.ions.out)
 Anova(Bicarbonate.ions.out)
@@ -1185,9 +1266,10 @@ Bicarbonate.ions.emmeans.out <- emmeans(Bicarbonate.ions.out, specs = pairwise ~
 Bicarbonate.ions.emmeans.out
 
 #Anion Gap ANOVA
+#sampling date not significant
 hist(Ions$Anion_gap)
 Anion.gap.ions.out <- aov(rank(Anion_gap) ~ Temperature_Group * Recovery_Group,
-                            data = Ions
+                            data = Ions_merged
 )
 summary(Anion.gap.ions.out)
 Anova(Anion.gap.ions.out)
@@ -1360,14 +1442,14 @@ Lactate$Recovery_Group <- relevel(Lactate$Recovery_Group, "Control")
 
 lactate_boxplot <- ggplot(Lactate, aes(x = Recovery_Group, y = Plasma_Lactate, fill = Temperature_Group)) +
   geom_boxplot(outlier.shape = NA) +
-  stat_summary(fun.y = "mean", color = "black", shape = 4, stroke = 1.5, position = position_dodge2(
+  stat_summary(fun.y = "mean", color = "black", shape = 4, stroke = 1, position = position_dodge2(
     width = 0.75, preserve = "single"
   )) +
   scale_fill_manual(
     labels = c("Low" = "13.0°C", "Middle" = "17.5°C", "High" = "22.0°C"),
     values = c("#2c728e", "#28ae80", "#addc30")
   ) +
-  geom_point(aes(shape = Temperature_Group,colour = Temperature_Group, fill = Temperature_Group), color = "black", stroke = 1,alpha = 0.7, size = 2, position = position_jitterdodge())
+  geom_point(aes(shape = Temperature_Group,colour = Temperature_Group, fill = Temperature_Group), color = "black", stroke = 0.75,alpha = 0.5, size = 1.5, position = position_jitterdodge())
 
 lactate_boxplot
 
@@ -1398,7 +1480,7 @@ l_boxplot<-lactate_boxplot + theme_classic(base_size = 14) +
            size = 10, angle = 0
   )+scale_x_discrete(
     limit = c("Control", "Immediate", "30_min", "4_hour", "8_hour"),
-    labels = c("Control", "Immediate", "30 min", "4 h", "8 h"))+
+    labels = c("Control", "0h", "0.5h", "4 h", "8 h"))+
   theme(legend.position = "top", legend.box="vertical",legend.margin=margin(),legend.text = element_text(size=14), legend.key.height= unit(12, 'mm'),
         legend.key.width= unit(13, 'mm'))
 
@@ -2157,14 +2239,14 @@ chl_boxplot<-chloride_boxplot + theme_classic(base_size = 10) +
   )+  
   theme(legend.position = "none")+
   coord_cartesian(ylim=c(68,120), clip = 'off')+
-  annotate("rect", xmin = 1.7, xmax = 2.4, ymin = 121, ymax = 124,
+  annotate("rect", xmin = 1.7, xmax = 2.4, ymin = 120.5, ymax = 123,
            fill = c("#2c728e"), col='grey20')+
-  annotate("rect", xmin = 2.7, xmax = 3.4, ymin = 121, ymax = 124,
+  annotate("rect", xmin = 2.7, xmax = 3.4, ymin = 120.5, ymax = 123,
            fill = c("#28ae80"), col='grey20')+
-  annotate("rect", xmin = 3.7, xmax = 4.4, ymin = 121, ymax = 124,
+  annotate("rect", xmin = 3.7, xmax = 4.4, ymin = 120.5, ymax = 123,
            fill = c("#addc30"), col='grey20')+
   annotate("text",
-           x = c(2.05, 3.05,4.05), y = c(123, 123, 123),
+           x = c(2.05, 3.05,4.05), y = c(122, 122, 122),
            label = c("a", "ab", "b"), color = "black",
            size = 4, angle = 0
   )
@@ -2212,7 +2294,7 @@ an_boxplot<-anion_boxplot + theme_classic(base_size = 10) +
   ) +
   labs(y = "Anion Gap (mmol/L)", x = "Recovery Group") + scale_x_discrete(
     limit = c("Control", "Immediate", "30_min", "4_hour", "8_hour"),
-    labels = c("Control", "Immediate", "30 min", "4 h", "8 h")
+    labels = c("Control", "0 h", "0.5 h", "4 h", "8 h")
   )+
   annotate("segment",
            linewidth = .5, x = .5, xend = 1.5, y = 17, yend = 17)  +
@@ -2234,14 +2316,14 @@ an_boxplot<-anion_boxplot + theme_classic(base_size = 10) +
   )+  
   theme(legend.position = "none")+
   coord_cartesian(ylim=c(0,32), clip = 'off')+
-  annotate("rect", xmin = 1.7, xmax = 2.4, ymin = 32.5, ymax = 34.5,
+  annotate("rect", xmin = 1.7, xmax = 2.4, ymin = 31.5, ymax = 33.5,
            fill = c("#2c728e"), col='grey20')+
-  annotate("rect", xmin = 2.7, xmax = 3.4, ymin = 32.5, ymax = 34.5,
+  annotate("rect", xmin = 2.7, xmax = 3.4, ymin = 31.5, ymax = 33.5,
            fill = c("#28ae80"), col='grey20')+
-  annotate("rect", xmin = 3.7, xmax = 4.4, ymin = 32.5, ymax = 34.5,
+  annotate("rect", xmin = 3.7, xmax = 4.4, ymin = 31.5, ymax = 33.5,
            fill = c("#addc30"), col='grey20')+
   annotate("text",
-           x = c(2.05, 3.05,4.05), y = c(33.5, 33.5, 33.5),
+           x = c(2.05, 3.05,4.05), y = c(32.5, 32.5, 32.5),
            label = c("c", "b", "a"), color = "black",
            size = 4, angle = 0
   )
@@ -2295,7 +2377,7 @@ bi_boxplot<-Bicarb_boxplot + theme_classic(base_size = 10) +
   ) +
   labs(y = "Bicarbonate (mmol/L)", x = "Recovery Group") + scale_x_discrete(
     limit = c("Control", "Immediate", "30_min", "4_hour", "8_hour"),
-    labels = c("Control", "Immediate", "30 min", "4 h", "8 h")
+    labels = c("Control", "0 h", "0.5 h", "4 h", "8 h")
   )+
   annotate("segment",
            linewidth = .5, x = .5, xend = 1.5, y = 12, yend = 12)  +
@@ -2332,7 +2414,7 @@ bi_boxplot<-Bicarb_boxplot + theme_classic(base_size = 10) +
 bi_boxplot
 
 #legend plot
-data<-data.frame(x=2, y=5)
+data<-data.frame(x=7, y=3)
 legend<-ggplot(data,aes(color="purple"))
 
 legend.for.plots<-legend+ggtitle("  ")+
@@ -2343,35 +2425,37 @@ legend.for.plots<-legend+ggtitle("  ")+
   theme(axis.text.x = element_blank()) +
   theme(axis.text.y = element_blank()) +
   theme(legend.title = element_blank()) +
-  coord_cartesian(ylim=c(0,5), clip = 'off')+
+  coord_cartesian(ylim=c(0,3), clip = 'on')+
   xlim(0,7)+
-  annotate("rect", xmin = 3, xmax = 5, ymin = 4.3, ymax = 5.5,
+  annotate("rect", xmin = 1, xmax = 2.75, ymin = 0, ymax = 2,
            fill = c("#2c728e"), col='grey20')+
-  annotate("rect", xmin = 3, xmax = 5, ymin = 2.3, ymax =3.5 ,
+  annotate("rect", xmin = 3, xmax = 4.75, ymin = 0, ymax =2 ,
            fill = c("#28ae80"), col='grey20')+
-  annotate("rect", xmin = 3, xmax = 5, ymin = .3, ymax = 1.5,
+  annotate("rect", xmin = 5, xmax = 6.75, ymin = 0, ymax = 2,
            fill = c("#addc30"), col='grey20')+
   annotate("text",
-           x = c(4, 4,4), y = c(4.5, 2.5, .5),
+           x = c(1.9, 3.9,5.9), y = c(1.3, 1.3, 1.3),
            label = c("13.0°C", "17.5°C", "22.0°C"), color = "black",
            size = 4, angle = 0 )+
   annotate("point",
-           x = c(4, 4,4), y = c(5, 3, 1),
+           x = c(1.9, 3.9,5.9), y = c(0.5, 0.5, 0.5),
            shape = c(21, 24, 22), color = "black", stroke = 1,alpha = 0.7,
-           size = 5)
+           size = 4)
 legend.for.plots
 
 
 
 # Combined Anion Gap, Ions and Bicarb plots
-anion_ions_combo_plot<-plot_grid(p_boxplot, s_boxplot, chl_boxplot, bi_boxplot, an_boxplot,legend.for.plots, ncol = 2, labels = c('A', 'B','C', 'D', 'E'), label_size = 12)
+anion_ions_combo_plot<-plot_grid(plot_grid(p_boxplot, chl_boxplot, bi_boxplot, an_boxplot, ncol = 2, labels = c('A', 'B','C', 'D'), label_size = 12),
+plot_grid(NULL, legend.for.plots, NULL, nrow = 1, rel_widths = c(1, 2, 1)), rel_heights = c(2,0.5), nrow=2)
 anion_ions_combo_plot
+
 
 ggsave("RevisedIonBoxplots.png",
        plot = last_plot(),
        device = NULL,
        path = NULL,
-       height = 228,
+       height = 200,
        width = 188,
        units = c("mm"),
        dpi = 2000,
@@ -2391,6 +2475,19 @@ sum.stats.ctmax.etfl <- CTMax %>%
   ))
 sum.stats.ctmax.etfl
 write.csv(sum.stats.ctmax.etfl, "CTMaxETFL.sum.csv")
+
+# Rostrum to Fork Length
+sum.stats.ctmax.rtfl <- CTMax %>%
+  group_by(Temperature_Group) %>%
+  select(c("Rostrum_to_fork_Length_mm")) %>%
+  summarise_all(list(
+    "sample_size" = ~ sum(!is.na(.)),
+    "mean" = ~ mean(., na.rm = TRUE),
+    "sd" = ~ sd(., na.rm = TRUE),
+    "se" = ~ sd(., na.rm = TRUE) / sqrt(sum(!is.na(.)))
+  ))
+sum.stats.ctmax.rtfl
+write.csv(sum.stats.ctmax.rtfl, "CTMaxRTFL.sum.csv")
 
 # Weight
 sum.stats.ctmax.weight <- CTMax %>%
@@ -2481,6 +2578,32 @@ par(op)
 
 LOE.emmeans.out <- emmeans(LOE.out, specs = pairwise ~ Temperature_Group)
 LOE.emmeans.out
+
+# Rostrum to Fork Length ANOVA (Selected)
+RTFL.ctmax.out <- aov(Rostrum_to_fork_Length_mm ~ Temperature_Group,
+                data = CTMax
+)
+summary(RTFL.ctmax.out)
+Anova(RTFL.ctmax.out)
+
+shapiro.test(RTFL.ctmax.out$res)
+par(mfrow = c(2, 2))
+plot(RTFL.ctmax.out)
+leveneTest(RTFL.ctmax.out)
+
+#Zurr Mixed Effect Models 2.3.6.1
+#"C:\Lab_Files_Team_Folder\Stats_Stuff\Textbooks_and_book_chapters\Zuur_et_al_Mixed_Effects_Models_Book.pdf"
+op <- par(mfrow = c(2, 2), mar = c(5, 4, 1, 2))
+plot(RTFL.ctmax.out, add.smooth = FALSE, which = 1)
+E <- resid(RTFL.ctmax.out)
+hist(E, xlab = "Residuals", main = "")
+plot(Exercise$Temperature_Group, E, xlab = "temp",
+     ylab = "Residuals")
+par(op)
+
+RTFL.ctmax.emmeans.out <- emmeans(RTFL.ctmax.out, specs = pairwise ~ Temperature_Group)
+RTFL.ctmax.emmeans.out
+
 
 ### LM for CTMax ------------------------------------------------------------
 #Model1
@@ -2729,3 +2852,6 @@ ggp.2 <- ggp +
   labs(y = "LOE Temperature (°C)", x = "Eye to Fork Length(mm)")+
   theme(aspect.ratio = ((1 + sqrt(2)) / 5))
 ggp.2
+
+
+
